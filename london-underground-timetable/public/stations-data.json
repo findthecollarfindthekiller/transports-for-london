@@ -1,0 +1,224 @@
+{
+  "stations": {
+    "Baker Street": {
+      "lines": ["Bakerloo", "Circle", "Hammersmith", "Jubilee", "Metropolitan"],
+      "zone": 1
+    },
+    "Victoria": {
+      "lines": ["Circle", "District", "Jubilee", "Victoria"],
+      "zone": 1
+    },
+    "King's Cross St. Pancras": {
+      "lines": ["Circle", "Metropolitan", "Northern", "Piccadilly", "Victoria"],
+      "zone": 1
+    },
+    "Waterloo": {
+      "lines": ["Bakerloo", "Jubilee", "Northern", "Waterloo"],
+      "zone": 1
+    },
+    "Liverpool Street": {
+      "lines": ["Central", "Circle", "Metropolitan"],
+      "zone": 1
+    },
+    "Monument": {
+      "lines": ["Circle", "District"],
+      "zone": 1
+    },
+    "Bank": {
+      "lines": ["Central", "Metropolitan"],
+      "zone": 1
+    },
+    "Embankment": {
+      "lines": ["Bakerloo", "Circle", "District", "Northern"],
+      "zone": 1
+    },
+    "Paddington": {
+      "lines": ["Bakerloo", "Circle", "Hammersmith"],
+      "zone": 1
+    },
+    "Oxford Circus": {
+      "lines": ["Bakerloo", "Central", "Victoria"],
+      "zone": 1
+    },
+    "Piccadilly Circus": {
+      "lines": ["Bakerloo", "Piccadilly"],
+      "zone": 1
+    },
+    "Leicester Square": {
+      "lines": ["Northern", "Piccadilly"],
+      "zone": 1
+    },
+    "Covent Garden": {
+      "lines": ["Piccadilly"],
+      "zone": 1
+    },
+    "Charing Cross": {
+      "lines": ["Bakerloo", "Northern"],
+      "zone": 1
+    },
+    "Westminster": {
+      "lines": ["Circle", "District", "Jubilee"],
+      "zone": 1
+    },
+    "Bond Street": {
+      "lines": ["Central", "Jubilee"],
+      "zone": 1
+    },
+    "Green Park": {
+      "lines": ["Jubilee", "Piccadilly", "Victoria"],
+      "zone": 1
+    },
+    "Marble Arch": {
+      "lines": ["Central"],
+      "zone": 1
+    },
+    "Tottenham Court Road": {
+      "lines": ["Central", "Northern"],
+      "zone": 1
+    },
+    "Holborn": {
+      "lines": ["Central", "Piccadilly"],
+      "zone": 1
+    },
+    "Moorgate": {
+      "lines": ["Circle", "Metropolitan"],
+      "zone": 1
+    },
+    "Barbican": {
+      "lines": ["Circle", "Metropolitan"],
+      "zone": 1
+    },
+    "Farringdon": {
+      "lines": ["Circle", "Metropolitan"],
+      "zone": 1
+    },
+    "St. Paul's": {
+      "lines": ["Central"],
+      "zone": 1
+    },
+    "Bethnal Green": {
+      "lines": ["Central"],
+      "zone": 2
+    },
+    "Mile End": {
+      "lines": ["Central", "District"],
+      "zone": 2
+    },
+    "Stratford": {
+      "lines": ["Central", "Jubilee"],
+      "zone": 2
+    },
+    "Aldgate": {
+      "lines": ["Metropolitan"],
+      "zone": 1
+    },
+    "Aldgate East": {
+      "lines": ["District"],
+      "zone": 1
+    },
+    "Tower Hill": {
+      "lines": ["Circle", "District"],
+      "zone": 1
+    },
+    "Cannon Street": {
+      "lines": ["Circle", "District"],
+      "zone": 1
+    },
+    "Mansion House": {
+      "lines": ["Circle", "District"],
+      "zone": 1
+    },
+    "Blackfriars": {
+      "lines": ["Circle", "District"],
+      "zone": 1
+    },
+    "Temple": {
+      "lines": ["Circle"],
+      "zone": 1
+    },
+    "Sloane Square": {
+      "lines": ["Circle", "District"],
+      "zone": 1
+    },
+    "South Kensington": {
+      "lines": ["Circle", "District", "Piccadilly"],
+      "zone": 2
+    },
+    "Gloucester Road": {
+      "lines": ["Circle", "District", "Piccadilly"],
+      "zone": 2
+    },
+    "Notting Hill Gate": {
+      "lines": ["Central", "Circle"],
+      "zone": 2
+    },
+    "Queens way": {
+      "lines": ["Central"],
+      "zone": 2
+    },
+    "Lancaster Gate": {
+      "lines": ["Central"],
+      "zone": 2
+    },
+    "Marble Arch": {
+      "lines": ["Central"],
+      "zone": 1
+    },
+    "Ealing Broadway": {
+      "lines": ["Central", "Piccadilly"],
+      "zone": 4
+    },
+    "Hammersmith": {
+      "lines": ["Hammersmith", "Piccadilly"],
+      "zone": 2
+    },
+    "Canary Wharf": {
+      "lines": ["Jubilee"],
+      "zone": 2
+    },
+    "North Greenwich": {
+      "lines": ["Jubilee"],
+      "zone": 2
+    },
+    "London Bridge": {
+      "lines": ["Jubilee"],
+      "zone": 1
+    },
+    "Southwark": {
+      "lines": ["Jubilee"],
+      "zone": 1
+    },
+    "Brixton": {
+      "lines": ["Victoria"],
+      "zone": 2
+    },
+    "Vauxhall": {
+      "lines": ["Victoria"],
+      "zone": 2
+    },
+    "Pimlico": {
+      "lines": ["Victoria"],
+      "zone": 1
+    },
+    "Edgware": {
+      "lines": ["Northern"],
+      "zone": 5
+    },
+    "Hampstead": {
+      "lines": ["Northern"],
+      "zone": 3
+    },
+    "Stockwell": {
+      "lines": ["Northern", "Victoria"],
+      "zone": 2
+    },
+    "Oval": {
+      "lines": ["Northern"],
+      "zone": 2
+    },
+    "Kennington": {
+      "lines": ["Northern"],
+      "zone": 2
+    }
+  }
+}

@@ -226,6 +226,159 @@
             font-size: 0.8rem;
             margin-top: 0.5rem;
         }
+        .tab-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #ddd;
+        }
+        .tab-btn {
+            padding: 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            color: #999;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .station-search {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .station-search input {
+            flex: 1;
+            padding: 0.8rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+        .station-search button {
+            padding: 0.8rem 1.5rem;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .station-search button:hover {
+            background: #764ba2;
+        }
+        .station-details {
+            background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+            padding: 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+        }
+        .station-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 1rem;
+        }
+        .station-name-large {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .zone-badge {
+            background: #667eea;
+            color: white;
+            padding: 0.4rem 0.8rem;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .station-lines {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .station-line-badge {
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .services-list {
+            display: grid;
+            gap: 1rem;
+        }
+        .service-item {
+            background: white;
+            padding: 1.2rem;
+            border-radius: 8px;
+            border-left: 5px solid;
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr auto;
+            gap: 1rem;
+            align-items: center;
+        }
+        .service-item-detail {
+            display: flex;
+            flex-direction: column;
+        }
+        .service-label {
+            font-size: 0.85rem;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 0.3rem;
+        }
+        .service-value {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #333;
+        }
+        .no-results {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+            font-size: 1.1rem;
+        }
+        .suggestions-list {
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 5px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-top: 0.5rem;
+            display: none;
+            position: absolute;
+            width: calc(100% - 2rem);
+            z-index: 10;
+        }
+        .suggestions-list.active {
+            display: block;
+        }
+        .suggestion-item {
+            padding: 0.8rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+            transition: background 0.2s;
+        }
+        .suggestion-item:hover {
+            background: #f5f5f5;
+        }
+        .station-search-container {
+            position: relative;
+        }
     </style>
 </head>
 <body>
@@ -252,20 +405,43 @@
             </div>
         </div>
 
-        <div class="lines-grid" id="linesContainer"></div>
+        <div class="tab-buttons">
+            <button class="tab-btn active" onclick="switchTab('lines')">Lines & Timetables</button>
+            <button class="tab-btn" onclick="switchTab('stations')">Station Information</button>
+        </div>
 
-        <div class="main-content" id="mainContent">
-            <div class="stations-container scrollbar">
-                <h3 id="stationTitle">Select a Line</h3>
-                <div id="stationsDisplay" class="no-line-selected">
-                    Select a line to view stations
+        <!-- Lines Tab -->
+        <div id="lines-tab" class="tab-content active">
+            <div class="lines-grid" id="linesContainer"></div>
+
+            <div class="main-content" id="mainContent">
+                <div class="stations-container scrollbar">
+                    <h3 id="stationTitle">Select a Line</h3>
+                    <div id="stationsDisplay" class="no-line-selected">
+                        Select a line to view stations
+                    </div>
+                </div>
+                <div class="schedules-container scrollbar">
+                    <h3 id="scheduleTitle">Timetable</h3>
+                    <div id="schedulesDisplay" class="no-line-selected">
+                        Select a line to view the timetable
+                    </div>
                 </div>
             </div>
-            <div class="schedules-container scrollbar">
-                <h3 id="scheduleTitle">Timetable</h3>
-                <div id="schedulesDisplay" class="no-line-selected">
-                    Select a line to view the timetable
+        </div>
+
+        <!-- Stations Tab -->
+        <div id="stations-tab" class="tab-content">
+            <div class="station-search-container">
+                <div class="station-search">
+                    <input type="text" id="stationSearchInput" placeholder="Search for a station..." autocomplete="off">
+                    <button onclick="searchStation()">Search</button>
                 </div>
+                <div class="suggestions-list" id="suggestionsList"></div>
+            </div>
+            
+            <div id="stationInfoContainer">
+                <div class="no-line-selected">Search for a station to view current timetables</div>
             </div>
         </div>
     </div>
@@ -300,8 +476,10 @@
         };
 
         let timetables = {};
+        let stationsData = {};
         let activeLineIndex = -1;
         let activeLine = null;
+        let allStations = [];
 
         function updateTime() {
             const now = new Date();
@@ -310,13 +488,22 @@
             document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
         }
 
-        async function loadTimetables() {
+        async function loadData() {
             try {
-                const response = await fetch('/timetables.json');
-                timetables = await response.json();
+                const [timetablesRes, stationsRes] = await Promise.all([
+                    fetch('/timetables.json'),
+                    fetch('/stations-data.json')
+                ]);
+                timetables = await timetablesRes.json();
+                stationsData = await stationsRes.json();
+                
+                // Create a sorted list of all stations
+                allStations = Object.keys(stationsData.stations).sort();
+                
                 renderLines();
+                setupStationSearch();
             } catch (error) {
-                console.error('Error loading timetables:', error);
+                console.error('Error loading data:', error);
             }
         }
 
@@ -371,6 +558,7 @@
                 stationDiv.onclick = () => {
                     document.querySelectorAll('.station').forEach(s => s.style.backgroundColor = '#f9f9f9');
                     stationDiv.style.backgroundColor = color + '20';
+                    showStationFromLine(station, lineName);
                 };
                 stationsList.appendChild(stationDiv);
             });
@@ -451,6 +639,197 @@
                 .slice(0, count);
         }
 
+        function setupStationSearch() {
+            const searchInput = document.getElementById('stationSearchInput');
+            const suggestionsList = document.getElementById('suggestionsList');
+
+            searchInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase().trim();
+                if (query.length === 0) {
+                    suggestionsList.classList.remove('active');
+                    return;
+                }
+
+                const matches = allStations.filter(station => 
+                    station.toLowerCase().includes(query)
+                ).slice(0, 8);
+
+                if (matches.length === 0) {
+                    suggestionsList.classList.remove('active');
+                    return;
+                }
+
+                suggestionsList.innerHTML = matches
+                    .map(station => `
+                        <div class="suggestion-item" onclick="selectStationFromSearch('${station}')">
+                            ${station}
+                        </div>
+                    `)
+                    .join('');
+                suggestionsList.classList.add('active');
+            });
+
+            document.addEventListener('click', (e) => {
+                if (e.target !== searchInput) {
+                    suggestionsList.classList.remove('active');
+                }
+            });
+        }
+
+        function selectStationFromSearch(stationName) {
+            document.getElementById('stationSearchInput').value = stationName;
+            document.getElementById('suggestionsList').classList.remove('active');
+            showStationInfo(stationName);
+        }
+
+        function searchStation() {
+            const query = document.getElementById('stationSearchInput').value.trim();
+            if (query.length === 0) return;
+            showStationInfo(query);
+        }
+
+        function showStationInfo(stationName) {
+            const stationInfo = stationsData.stations[stationName];
+            
+            if (!stationInfo) {
+                document.getElementById('stationInfoContainer').innerHTML = `
+                    <div class="no-results">Station not found. Try another search.</div>
+                `;
+                return;
+            }
+
+            const servingLines = stationInfo.lines;
+            const zone = stationInfo.zone;
+
+            let html = `
+                <div class="station-details">
+                    <div class="station-header">
+                        <div>
+                            <div class="station-name-large">${stationName}</div>
+                            <div style="color: #666; margin-top: 0.5rem;">
+                                Served by ${servingLines.length} line${servingLines.length !== 1 ? 's' : ''}
+                            </div>
+                        </div>
+                        <div class="zone-badge">Zone ${zone}</div>
+                    </div>
+                    <div class="station-lines">
+            `;
+
+            servingLines.forEach(line => {
+                const colorClass = lineColors[line] || 'central';
+                const color = colorHexMap[colorClass];
+                html += `<div class="station-line-badge" style="background-color: ${color};">${line}</div>`;
+            });
+
+            html += `</div></div><div class="services-list">`;
+
+            // Get all services at this station
+            const services = [];
+            servingLines.forEach(line => {
+                const lineData = timetables[line];
+                if (lineData) {
+                    const stationIndex = lineData.stations.indexOf(stationName);
+                    if (stationIndex !== -1) {
+                        lineData.schedules.forEach(schedule => {
+                            const arrivalMinutes = calculateArrivalTime(stationIndex, lineData.stations.length, schedule.departure);
+                            services.push({
+                                line: line,
+                                departureTime: schedule.departure,
+                                arrivalTime: arrivalMinutes,
+                                platform: schedule.platform,
+                                status: schedule.status,
+                                colorClass: lineColors[line]
+                            });
+                        });
+                    }
+                }
+            });
+
+            // Sort by arrival time
+            services.sort((a, b) => {
+                const [aHours, aMins] = a.arrivalTime.split(':').map(Number);
+                const [bHours, bMins] = b.arrivalTime.split(':').map(Number);
+                return (aHours * 60 + aMins) - (bHours * 60 + bMins);
+            });
+
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+            if (services.length === 0) {
+                html += '<div class="no-results">No services found at this station.</div>';
+            } else {
+                services.slice(0, 20).forEach((service, idx) => {
+                    const [hours, mins] = service.arrivalTime.split(':').map(Number);
+                    const serviceMinutes = hours * 60 + mins;
+                    const isNext = idx === 0 && serviceMinutes >= currentMinutes;
+                    const statusClass = service.status === 'On Time' ? 'status-on-time' : 'status-delayed';
+                    const color = colorHexMap[service.colorClass];
+
+                    html += `
+                        <div class="service-item" style="border-left-color: ${color}; ${isNext ? 'box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);' : ''}">
+                            <div class="service-item-detail">
+                                <div class="service-label">Line</div>
+                                <div class="service-value" style="color: white; background: ${color}; padding: 0.4rem 0.8rem; border-radius: 4px; width: fit-content;">
+                                    ${service.line}
+                                </div>
+                            </div>
+                            <div class="service-item-detail">
+                                <div class="service-label">Arrival Time</div>
+                                <div class="service-value">${service.arrivalTime}</div>
+                            </div>
+                            <div class="service-item-detail">
+                                <div class="service-label">Platform</div>
+                                <div class="service-value">${service.platform}</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div class="schedule-status ${statusClass}">${service.status}</div>
+                                ${isNext ? '<span class="info-badge" style="display: block; margin-top: 0.5rem;">NEXT</span>' : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += '</div>';
+            document.getElementById('stationInfoContainer').innerHTML = html;
+        }
+
+        function calculateArrivalTime(stationIndex, totalStations, departure) {
+            const [hours, mins] = departure.split(':').map(Number);
+            // Estimate: 2 minutes per station
+            const minutesPerStation = 2;
+            const totalMinutes = stationIndex * minutesPerStation;
+            
+            const totalMins = mins + totalMinutes;
+            const extraHours = Math.floor(totalMins / 60);
+            const finalMins = totalMins % 60;
+            const finalHours = (hours + extraHours) % 24;
+
+            return `${String(finalHours).padStart(2, '0')}:${String(finalMins).padStart(2, '0')}`;
+        }
+
+        function showStationFromLine(stationName, lineName) {
+            switchTab('stations');
+            setTimeout(() => {
+                document.getElementById('stationSearchInput').value = stationName;
+                showStationInfo(stationName);
+            }, 100);
+        }
+
+        function switchTab(tabName) {
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
         document.getElementById('viewMode').addEventListener('change', () => {
             if (activeLine) {
                 const data = timetables[activeLine];
@@ -470,7 +849,7 @@
         setInterval(updateTime, 1000);
 
         // Initialize
-        loadTimetables();
+        loadData();
     </script>
 </body>
 </html>
