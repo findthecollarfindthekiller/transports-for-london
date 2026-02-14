@@ -1,0 +1,167 @@
+{
+  "Bakerloo": {
+    "stations": ["Harrow & Wealdstone", "Kenton", "South Kenton", "North Wembley", "Wembley Central", "Stonebridge Park", "Harlesden", "Willesden Junction", "Kensal Green", "Queen's Park", "Kilburn Park", "Maida Vale", "Warwick Avenue", "Paddington", "Edgware Road", "Marylebone", "Baker Street", "Regent's Park", "Oxford Circus", "Piccadilly Circus", "Charing Cross", "Embankment", "Waterloo", "Lambeth North", "Elephant & Castle"],
+    "schedules": [
+      {"departure": "06:30", "platform": "1", "status": "On Time"},
+      {"departure": "07:00", "platform": "2", "status": "On Time"},
+      {"departure": "07:30", "platform": "1", "status": "On Time"},
+      {"departure": "08:00", "platform": "2", "status": "Delayed 2 min"},
+      {"departure": "08:30", "platform": "1", "status": "On Time"},
+      {"departure": "09:00", "platform": "2", "status": "On Time"},
+      {"departure": "09:30", "platform": "1", "status": "On Time"},
+      {"departure": "10:00", "platform": "2", "status": "On Time"},
+      {"departure": "10:30", "platform": "1", "status": "On Time"},
+      {"departure": "11:00", "platform": "2", "status": "On Time"}
+    ]
+  },
+  "Central": {
+    "stations": ["Ealing Broadway", "West Acton", "North Acton", "East Acton", "White City", "Shepherd's Bush", "Holland Park", "Notting Hill Gate", "Queensway", "Lancaster Gate", "Marble Arch", "Bond Street", "Oxford Circus", "Tottenham Court Road", "Holborn", "Chancery Lane", "St. Paul's", "Bank", "Liverpool Street", "Bethnal Green", "Mile End", "Stratford"],
+    "schedules": [
+      {"departure": "06:15", "platform": "A", "status": "On Time"},
+      {"departure": "06:45", "platform": "B", "status": "On Time"},
+      {"departure": "07:15", "platform": "A", "status": "On Time"},
+      {"departure": "07:45", "platform": "B", "status": "On Time"},
+      {"departure": "08:15", "platform": "A", "status": "On Time"},
+      {"departure": "08:45", "platform": "B", "status": "On Time"},
+      {"departure": "09:15", "platform": "A", "status": "On Time"},
+      {"departure": "09:45", "platform": "B", "status": "On Time"},
+      {"departure": "10:15", "platform": "A", "status": "On Time"},
+      {"departure": "10:45", "platform": "B", "status": "On Time"}
+    ]
+  },
+  "Circle": {
+    "stations": ["Hammersmith", "Goldhawk Road", "Shepherd's Bush Market", "Wood Lane", "Latimer Road", "Ladbroke Grove", "Westbourne Park", "Royal Oak", "Paddington", "Edgware Road", "Baker Street", "Great Portland Street", "Euston Square", "King's Cross St. Pancras", "Farringdon", "Barbican", "Moorgate", "Liverpool Street", "Aldgate", "Tower Hill", "Monument", "Cannon Street", "Mansion House", "Blackfriars", "Temple", "Embankment", "Westminster", "St. James's Park", "Victoria", "Sloane Square", "South Kensington", "Gloucester Road", "High Street Kensington", "Notting Hill Gate", "Bayswater"],
+    "schedules": [
+      {"departure": "06:20", "platform": "C1", "status": "On Time"},
+      {"departure": "06:50", "platform": "C2", "status": "On Time"},
+      {"departure": "07:20", "platform": "C1", "status": "On Time"},
+      {"departure": "07:50", "platform": "C2", "status": "Delayed 1 min"},
+      {"departure": "08:20", "platform": "C1", "status": "On Time"},
+      {"departure": "08:50", "platform": "C2", "status": "On Time"},
+      {"departure": "09:20", "platform": "C1", "status": "On Time"},
+      {"departure": "09:50", "platform": "C2", "status": "On Time"},
+      {"departure": "10:20", "platform": "C1", "status": "On Time"},
+      {"departure": "10:50", "platform": "C2", "status": "On Time"}
+    ]
+  },
+  "District": {
+    "stations": ["Upminster", "Upminster Bridge", "Hornchurch", "Elm Park", "Dagenham East", "Dagenham Heathway", "Becontree", "Upney", "Barking", "East Ham", "Upton Park", "Plaistow", "West Ham", "Bromley-by-Bow", "Bow Road", "Mile End", "Stepney Green", "Whitechapel", "Aldgate East", "Tower Hill", "Monument", "Cannon Street", "Mansion House", "Blackfriars", "Temple", "Embankment", "Westminster", "St. James's Park", "Victoria", "Sloane Square", "South Kensington", "Gloucester Road", "Earl's Court", "West Brompton", "Fulham Broadway", "Parsons Green", "Putney Bridge", "East Putney", "Southfields", "Wimbledon Park", "Wimbledon"],
+    "schedules": [
+      {"departure": "06:25", "platform": "D1", "status": "On Time"},
+      {"departure": "07:00", "platform": "D2", "status": "On Time"},
+      {"departure": "07:35", "platform": "D1", "status": "On Time"},
+      {"departure": "08:10", "platform": "D2", "status": "On Time"},
+      {"departure": "08:45", "platform": "D1", "status": "On Time"},
+      {"departure": "09:20", "platform": "D2", "status": "On Time"},
+      {"departure": "09:55", "platform": "D1", "status": "On Time"},
+      {"departure": "10:30", "platform": "D2", "status": "Delayed 3 min"},
+      {"departure": "11:05", "platform": "D1", "status": "On Time"},
+      {"departure": "11:40", "platform": "D2", "status": "On Time"}
+    ]
+  },
+  "Jubilee": {
+    "stations": ["Stanmore", "Canons Park", "Queensbury", "Kingsbury", "Wembley Park", "Neasden", "Dollis Hill", "Willesden Green", "Kilburn", "West Hampstead", "Finchley Road", "Swiss Cottage", "St. John's Wood", "Baker Street", "Bond Street", "Green Park", "Westminster", "Waterloo", "Southwark", "London Bridge", "Bermondsey", "Canada Water", "Canary Wharf", "North Greenwich", "Canning Town", "West Ham", "Stratford"],
+    "schedules": [
+      {"departure": "06:40", "platform": "J1", "status": "On Time"},
+      {"departure": "07:10", "platform": "J2", "status": "On Time"},
+      {"departure": "07:40", "platform": "J1", "status": "On Time"},
+      {"departure": "08:10", "platform": "J2", "status": "On Time"},
+      {"departure": "08:40", "platform": "J1", "status": "On Time"},
+      {"departure": "09:10", "platform": "J2", "status": "On Time"},
+      {"departure": "09:40", "platform": "J1", "status": "On Time"},
+      {"departure": "10:10", "platform": "J2", "status": "On Time"},
+      {"departure": "10:40", "platform": "J1", "status": "On Time"},
+      {"departure": "11:10", "platform": "J2", "status": "On Time"}
+    ]
+  },
+  "Northern": {
+    "stations": ["Morden", "South Wimbledon", "Colliers Wood", "Tooting Broadway", "Tooting Bec", "Balham", "Clapham South", "Clapham Common", "Clapham North", "Stockwell", "Oval", "Kennington", "Waterloo", "Embankment", "Charing Cross", "Leicester Square", "Tottenham Court Road", "Goodge Street", "Warren Street", "Euston", "Mornington Crescent", "Camden Town", "Chalk Farm", "Belsize Park", "Hampstead", "Golders Green", "Brent Cross", "Hendon Central", "Colindale", "Burnt Oak", "Edgware"],
+    "schedules": [
+      {"departure": "06:35", "platform": "N1", "status": "On Time"},
+      {"departure": "07:05", "platform": "N2", "status": "On Time"},
+      {"departure": "07:35", "platform": "N1", "status": "On Time"},
+      {"departure": "08:05", "platform": "N2", "status": "On Time"},
+      {"departure": "08:35", "platform": "N1", "status": "On Time"},
+      {"departure": "09:05", "platform": "N2", "status": "On Time"},
+      {"departure": "09:35", "platform": "N1", "status": "Delayed 2 min"},
+      {"departure": "10:05", "platform": "N2", "status": "On Time"},
+      {"departure": "10:35", "platform": "N1", "status": "On Time"},
+      {"departure": "11:05", "platform": "N2", "status": "On Time"}
+    ]
+  },
+  "Piccadilly": {
+    "stations": ["Cockfosters", "Oakwood", "Southgate", "Arnos Grove", "Bounds Green", "Wood Green", "Turnpike Lane", "Manor House", "Finsbury Park", "Arsenal", "Holloway Road", "Caledonian Road", "King's Cross St. Pancras", "Russell Square", "Holborn", "Covent Garden", "Leicester Square", "Piccadilly Circus", "Green Park", "Hyde Park Corner", "Knightsbridge", "South Kensington", "Gloucester Road", "Earl's Court", "Barons Court", "Hammersmith", "Turnham Green", "Acton Town", "Ealing Common", "North Ealing", "Park Royal", "Alperton", "Sudbury Town", "Sudbury Hill", "South Harrow", "Rayners Lane", "Eastcote", "Ruislip Manor", "Ruislip", "Ickenham", "Hillingdon", "Uxbridge"],
+    "schedules": [
+      {"departure": "06:18", "platform": "P1", "status": "On Time"},
+      {"departure": "06:48", "platform": "P2", "status": "On Time"},
+      {"departure": "07:18", "platform": "P1", "status": "On Time"},
+      {"departure": "07:48", "platform": "P2", "status": "On Time"},
+      {"departure": "08:18", "platform": "P1", "status": "On Time"},
+      {"departure": "08:48", "platform": "P2", "status": "On Time"},
+      {"departure": "09:18", "platform": "P1", "status": "On Time"},
+      {"departure": "09:48", "platform": "P2", "status": "On Time"},
+      {"departure": "10:18", "platform": "P1", "status": "On Time"},
+      {"departure": "10:48", "platform": "P2", "status": "On Time"}
+    ]
+  },
+  "Victoria": {
+    "stations": ["Brixton", "Stockwell", "Vauxhall", "Pimlico", "Victoria", "Green Park", "Oxford Circus", "Warren Street", "Euston", "King's Cross St. Pancras", "Highbury & Islington", "Finsbury Park", "Seven Sisters", "Tottenham Hale", "Blackhorse Road", "Walthamstow Central"],
+    "schedules": [
+      {"departure": "06:32", "platform": "V1", "status": "On Time"},
+      {"departure": "07:02", "platform": "V2", "status": "On Time"},
+      {"departure": "07:32", "platform": "V1", "status": "On Time"},
+      {"departure": "08:02", "platform": "V2", "status": "On Time"},
+      {"departure": "08:32", "platform": "V1", "status": "On Time"},
+      {"departure": "09:02", "platform": "V2", "status": "On Time"},
+      {"departure": "09:32", "platform": "V1", "status": "On Time"},
+      {"departure": "10:02", "platform": "V2", "status": "On Time"},
+      {"departure": "10:32", "platform": "V1", "status": "Delayed 1 min"},
+      {"departure": "11:02", "platform": "V2", "status": "On Time"}
+    ]
+  },
+  "Waterloo": {
+    "stations": ["Waterloo", "Bank"],
+    "schedules": [
+      {"departure": "06:30", "platform": "W", "status": "On Time"},
+      {"departure": "07:00", "platform": "W", "status": "On Time"},
+      {"departure": "07:30", "platform": "W", "status": "On Time"},
+      {"departure": "08:00", "platform": "W", "status": "On Time"},
+      {"departure": "08:30", "platform": "W", "status": "On Time"},
+      {"departure": "09:00", "platform": "W", "status": "On Time"},
+      {"departure": "09:30", "platform": "W", "status": "On Time"},
+      {"departure": "10:00", "platform": "W", "status": "On Time"},
+      {"departure": "10:30", "platform": "W", "status": "On Time"},
+      {"departure": "11:00", "platform": "W", "status": "On Time"}
+    ]
+  },
+  "Hammersmith": {
+    "stations": ["Hammersmith", "King Street West", "Ravenscourt Park", "Stamford Brook", "Turnham Green", "Acton Town", "Ealing Common", "Ealing Broadway"],
+    "schedules": [
+      {"departure": "06:28", "platform": "H1", "status": "On Time"},
+      {"departure": "07:00", "platform": "H2", "status": "On Time"},
+      {"departure": "07:32", "platform": "H1", "status": "On Time"},
+      {"departure": "08:04", "platform": "H2", "status": "On Time"},
+      {"departure": "08:36", "platform": "H1", "status": "On Time"},
+      {"departure": "09:08", "platform": "H2", "status": "On Time"},
+      {"departure": "09:40", "platform": "H1", "status": "On Time"},
+      {"departure": "10:12", "platform": "H2", "status": "On Time"},
+      {"departure": "10:44", "platform": "H1", "status": "On Time"},
+      {"departure": "11:16", "platform": "H2", "status": "On Time"}
+    ]
+  },
+  "Metropolitan": {
+    "stations": ["Aldgate", "Liverpool Street", "Moorgate", "Barbican", "Farringdon", "King's Cross St. Pancras", "Great Portland Street", "Baker Street", "Finchley Road", "West Hampstead", "Hampstead", "Belsize Park", "Chalk Farm", "Camden Town", "Mornington Crescent", "Euston", "Warren Street", "Great Portland Street", "Baker Street", "St. John's Wood", "Swiss Cottage", "Finchley Road", "West Hampstead", "Hampstead", "Belsize Park", "Chalk Farm", "Camden Town", "Mornington Crescent", "Euston"],
+    "schedules": [
+      {"departure": "06:37", "platform": "M1", "status": "On Time"},
+      {"departure": "07:07", "platform": "M2", "status": "On Time"},
+      {"departure": "07:37", "platform": "M1", "status": "On Time"},
+      {"departure": "08:07", "platform": "M2", "status": "On Time"},
+      {"departure": "08:37", "platform": "M1", "status": "On Time"},
+      {"departure": "09:07", "platform": "M2", "status": "On Time"},
+      {"departure": "09:37", "platform": "M1", "status": "On Time"},
+      {"departure": "10:07", "platform": "M2", "status": "Delayed 2 min"},
+      {"departure": "10:37", "platform": "M1", "status": "On Time"},
+      {"departure": "11:07", "platform": "M2", "status": "On Time"}
+    ]
+  }
+}

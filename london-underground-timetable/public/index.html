@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>London Underground Timetable</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        header {
+            background-color: #1a1a1a;
+            color: white;
+            padding: 2rem;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .time-display {
+            font-size: 1.2rem;
+            color: #ffcc00;
+            font-weight: bold;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 2rem auto;
+            padding: 0 1rem;
+        }
+        .controls {
+            background: white;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .control-group {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .control-group label {
+            font-weight: bold;
+            color: #333;
+        }
+        select, input {
+            padding: 0.7rem;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: border-color 0.3s;
+        }
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .lines-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        .line-btn {
+            padding: 1.2rem;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+        .line-btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
+            filter: brightness(1.1);
+        }
+        .line-btn.active {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            transform: translateY(-8px) scale(1.05);
+            outline: 3px solid white;
+        }
+        .bakerloo { background-color: #894e24; }
+        .central { background-color: #dc241f; }
+        .circle { background-color: #ffce00; color: #333; }
+        .district { background-color: #007229; }
+        .hammersmith { background-color: #d799af; }
+        .jubilee { background-color: #6a7278; }
+        .metropolitan { background-color: #751056; }
+        .northern { background-color: #000000; }
+        .piccadilly { background-color: #0019a8; }
+        .victoria { background-color: #00a0e2; }
+        .waterloo { background-color: #76d0bd; }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+        }
+        .stations-container, .schedules-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .stations-container h3, .schedules-container h3 {
+            margin-bottom: 1.5rem;
+            font-size: 1.4rem;
+            color: #333;
+            border-bottom: 3px solid;
+            padding-bottom: 0.8rem;
+        }
+        .stations-list {
+            display: grid;
+            gap: 0.8rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .station {
+            padding: 0.8rem;
+            border-radius: 6px;
+            background-color: #f9f9f9;
+            border-left: 4px solid;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.2s;
+        }
+        .station:hover {
+            transform: translateX(5px);
+            background-color: #f0f0f0;
+        }
+        .station-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .schedules-list {
+            display: grid;
+            gap: 1rem;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+        .schedule-item {
+            padding: 1.2rem;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+            border-left: 5px solid;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .schedule-item.next-departure {
+            background: linear-gradient(135deg, #fff9e6 0%, #fffaed 100%);
+            border-left-color: #ffcc00;
+            box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
+            transform: scale(1.02);
+        }
+        .schedule-time {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+        .schedule-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            color: #666;
+            gap: 1rem;
+        }
+        .schedule-status {
+            padding: 0.3rem 0.8rem;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.85rem;
+        }
+        .status-on-time {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        .status-delayed {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .no-line-selected {
+            text-align: center;
+            color: #999;
+            padding: 3rem 2rem;
+            font-size: 1.1rem;
+        }
+        @media (max-width: 1000px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        .scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 10px;
+        }
+        .scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #764ba2;
+        }
+        .info-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 0.3rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🚇 London Underground Timetable</h1>
+        <div class="time-display">Current Time: <span id="currentTime">--:--</span></div>
+    </header>
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label>View:</label>
+                <select id="viewMode">
+                    <option value="all">All Lines</option>
+                    <option value="next">Next Departures</option>
+                    <option value="ontime">On Time Only</option>
+                </select>
+            </div>
+            <div class="control-group">
+                <label>Sort:</label>
+                <select id="sortMode">
+                    <option value="time">By Time</option>
+                    <option value="platform">By Platform</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="lines-grid" id="linesContainer"></div>
+
+        <div class="main-content" id="mainContent">
+            <div class="stations-container scrollbar">
+                <h3 id="stationTitle">Select a Line</h3>
+                <div id="stationsDisplay" class="no-line-selected">
+                    Select a line to view stations
+                </div>
+            </div>
+            <div class="schedules-container scrollbar">
+                <h3 id="scheduleTitle">Timetable</h3>
+                <div id="schedulesDisplay" class="no-line-selected">
+                    Select a line to view the timetable
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const lineColors = {
+            'Bakerloo': 'bakerloo',
+            'Central': 'central',
+            'Circle': 'circle',
+            'District': 'district',
+            'Hammersmith': 'hammersmith',
+            'Jubilee': 'jubilee',
+            'Metropolitan': 'metropolitan',
+            'Northern': 'northern',
+            'Piccadilly': 'piccadilly',
+            'Victoria': 'victoria',
+            'Waterloo': 'waterloo'
+        };
+
+        const colorHexMap = {
+            'bakerloo': '#894e24',
+            'central': '#dc241f',
+            'circle': '#ffce00',
+            'district': '#007229',
+            'hammersmith': '#d799af',
+            'jubilee': '#6a7278',
+            'metropolitan': '#751056',
+            'northern': '#000000',
+            'piccadilly': '#0019a8',
+            'victoria': '#00a0e2',
+            'waterloo': '#76d0bd'
+        };
+
+        let timetables = {};
+        let activeLineIndex = -1;
+        let activeLine = null;
+
+        function updateTime() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
+        }
+
+        async function loadTimetables() {
+            try {
+                const response = await fetch('/timetables.json');
+                timetables = await response.json();
+                renderLines();
+            } catch (error) {
+                console.error('Error loading timetables:', error);
+            }
+        }
+
+        function renderLines() {
+            const linesContainer = document.getElementById('linesContainer');
+            linesContainer.innerHTML = '';
+            
+            Object.keys(timetables).forEach((line, index) => {
+                const btn = document.createElement('button');
+                const colorClass = lineColors[line] || 'central';
+                btn.className = `line-btn ${colorClass}`;
+                btn.textContent = line;
+                btn.onclick = () => selectLine(line, index);
+                linesContainer.appendChild(btn);
+            });
+        }
+
+        function selectLine(line, index) {
+            activeLine = line;
+            activeLineIndex = index;
+            const data = timetables[line];
+            
+            renderStations(data.stations, line);
+            renderSchedules(data.schedules, line);
+            
+            document.querySelectorAll('.line-btn').forEach((btn, idx) => {
+                btn.classList.toggle('active', idx === index);
+            });
+        }
+
+        function renderStations(stations, lineName) {
+            const colorClass = lineColors[lineName] || 'central';
+            const color = colorHexMap[colorClass];
+            
+            const stationTitle = document.getElementById('stationTitle');
+            stationTitle.textContent = `Stations - ${lineName}`;
+            stationTitle.style.borderBottomColor = color;
+            
+            const stationsDisplay = document.getElementById('stationsDisplay');
+            stationsDisplay.innerHTML = '';
+            
+            const stationsList = document.createElement('div');
+            stationsList.className = 'stations-list';
+            
+            stations.forEach((station, i) => {
+                const stationDiv = document.createElement('div');
+                stationDiv.className = 'station';
+                stationDiv.style.borderLeftColor = color;
+                stationDiv.innerHTML = `
+                    <div class="station-name">${i + 1}. ${station}</div>
+                `;
+                stationDiv.onclick = () => {
+                    document.querySelectorAll('.station').forEach(s => s.style.backgroundColor = '#f9f9f9');
+                    stationDiv.style.backgroundColor = color + '20';
+                };
+                stationsList.appendChild(stationDiv);
+            });
+            
+            stationsDisplay.appendChild(stationsList);
+        }
+
+        function renderSchedules(schedules, lineName) {
+            const colorClass = lineColors[lineName] || 'central';
+            const color = colorHexMap[colorClass];
+            
+            const scheduleTitle = document.getElementById('scheduleTitle');
+            scheduleTitle.textContent = `Timetable - ${lineName}`;
+            scheduleTitle.style.borderBottomColor = color;
+            
+            const schedulesDisplay = document.getElementById('schedulesDisplay');
+            schedulesDisplay.innerHTML = '';
+            
+            const viewMode = document.getElementById('viewMode').value;
+            const sortMode = document.getElementById('sortMode').value;
+            
+            let filteredSchedules = schedules;
+            
+            if (viewMode === 'next') {
+                filteredSchedules = getNextDepartures(schedules, 3);
+            } else if (viewMode === 'ontime') {
+                filteredSchedules = schedules.filter(s => s.status === 'On Time');
+            }
+            
+            if (sortMode === 'platform') {
+                filteredSchedules = [...filteredSchedules].sort((a, b) => 
+                    a.platform.localeCompare(b.platform)
+                );
+            }
+            
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            
+            const schedulesList = document.createElement('div');
+            schedulesList.className = 'schedules-list';
+            
+            filteredSchedules.forEach((schedule, idx) => {
+                const [hours, mins] = schedule.departure.split(':').map(Number);
+                const scheduleMinutes = hours * 60 + mins;
+                const isNextDeparture = idx === 0 && scheduleMinutes >= currentMinutes;
+                
+                const scheduleDiv = document.createElement('div');
+                scheduleDiv.className = `schedule-item ${isNextDeparture ? 'next-departure' : ''}`;
+                scheduleDiv.style.borderLeftColor = color;
+                
+                const statusClass = schedule.status === 'On Time' ? 'status-on-time' : 'status-delayed';
+                
+                scheduleDiv.innerHTML = `
+                    <div class="schedule-time">${schedule.departure}</div>
+                    <div class="schedule-details">
+                        <div><strong>Platform:</strong> ${schedule.platform}</div>
+                        <div class="schedule-status ${statusClass}">${schedule.status}</div>
+                    </div>
+                    ${isNextDeparture ? '<span class="info-badge">NEXT TRAIN</span>' : ''}
+                `;
+                
+                schedulesList.appendChild(scheduleDiv);
+            });
+            
+            schedulesDisplay.appendChild(schedulesList);
+        }
+
+        function getNextDepartures(schedules, count) {
+            const now = new Date();
+            const currentMinutes = now.getHours() * 60 + now.getMinutes();
+            
+            return schedules
+                .filter(s => {
+                    const [hours, mins] = s.departure.split(':').map(Number);
+                    const scheduleMinutes = hours * 60 + mins;
+                    return scheduleMinutes >= currentMinutes;
+                })
+                .slice(0, count);
+        }
+
+        document.getElementById('viewMode').addEventListener('change', () => {
+            if (activeLine) {
+                const data = timetables[activeLine];
+                renderSchedules(data.schedules, activeLine);
+            }
+        });
+
+        document.getElementById('sortMode').addEventListener('change', () => {
+            if (activeLine) {
+                const data = timetables[activeLine];
+                renderSchedules(data.schedules, activeLine);
+            }
+        });
+
+        // Update time every second
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Initialize
+        loadTimetables();
+    </script>
+</body>
+</html>
