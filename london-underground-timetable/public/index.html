@@ -38,35 +38,45 @@
         }
         .controls {
             background: white;
-            border-radius: 10px;
-            padding: 1.5rem;
+            border-radius: 12px;
+            padding: 1.8rem;
             margin-bottom: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
             display: flex;
-            gap: 1rem;
+            gap: 2rem;
             flex-wrap: wrap;
             align-items: center;
+            border: 1px solid #f0f0f0;
         }
         .control-group {
             display: flex;
-            gap: 0.5rem;
+            gap: 0.8rem;
             align-items: center;
         }
         .control-group label {
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 1rem;
         }
         select, input {
-            padding: 0.7rem;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
+            padding: 0.85rem 1rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95rem;
             cursor: pointer;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+            font-weight: 500;
+        }
+        select:hover, input:hover {
+            border-color: #c0c0c0;
+            background-color: #fff;
         }
         select:focus, input:focus {
             outline: none;
             border-color: #667eea;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         .lines-grid {
             display: grid;
@@ -75,25 +85,41 @@
             margin-bottom: 2rem;
         }
         .line-btn {
-            padding: 1.2rem;
+            padding: 1.3rem 1.5rem;
             border: none;
             border-radius: 10px;
             color: white;
             font-size: 1rem;
-            font-weight: bold;
+            font-weight: 700;
             cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s, filter 0.2s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        .line-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: left 0.3s ease;
+        }
+        .line-btn:hover::before {
+            left: 100%;
         }
         .line-btn:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.3);
-            filter: brightness(1.1);
+            transform: translateY(-6px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
+            filter: brightness(1.08);
         }
         .line-btn.active {
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-            transform: translateY(-8px) scale(1.05);
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3);
+            transform: translateY(-8px) scale(1.03);
             outline: 3px solid white;
+            outline-offset: 2px;
         }
         .bakerloo { background-color: #894e24; }
         .central { background-color: #dc241f; }
@@ -113,16 +139,22 @@
         }
         .stations-container, .schedules-container {
             background-color: white;
-            border-radius: 10px;
-            padding: 2rem;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 2.2rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border: 1px solid #f5f5f5;
+            transition: box-shadow 0.3s ease;
+        }
+        .stations-container:hover, .schedules-container:hover {
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
         }
         .stations-container h3, .schedules-container h3 {
-            margin-bottom: 1.5rem;
-            font-size: 1.4rem;
-            color: #333;
+            margin-bottom: 1.8rem;
+            font-size: 1.3rem;
+            color: #1a1a1a;
             border-bottom: 3px solid;
-            padding-bottom: 0.8rem;
+            padding-bottom: 1rem;
+            font-weight: 700;
         }
         .stations-list {
             display: grid;
@@ -131,20 +163,24 @@
             overflow-y: auto;
         }
         .station {
-            padding: 0.8rem;
-            border-radius: 6px;
-            background-color: #f9f9f9;
+            padding: 1rem;
+            border-radius: 8px;
+            background-color: #f8f8f8;
             border-left: 4px solid;
             cursor: pointer;
-            transition: transform 0.2s, background-color 0.2s;
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+            border-left-width: 4px;
         }
         .station:hover {
-            transform: translateX(5px);
-            background-color: #f0f0f0;
+            transform: translateX(6px);
+            background-color: #f5f5f5;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
         .station-name {
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 0.95rem;
         }
         .schedules-list {
             display: grid;
@@ -153,44 +189,57 @@
             overflow-y: auto;
         }
         .schedule-item {
-            padding: 1.2rem;
-            border-radius: 8px;
-            background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
+            padding: 1.3rem;
+            border-radius: 10px;
+            background: #f9f9f9;
             border-left: 5px solid;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+            border-left-width: 5px;
+        }
+        .schedule-item:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
         }
         .schedule-item.next-departure {
-            background: linear-gradient(135deg, #fff9e6 0%, #fffaed 100%);
+            background: linear-gradient(135deg, #fffbf0 0%, #fffaf5 100%);
             border-left-color: #ffcc00;
-            box-shadow: 0 4px 12px rgba(255, 204, 0, 0.3);
-            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(255, 204, 0, 0.25);
+            transform: scale(1.02) translateY(-2px);
         }
         .schedule-time {
-            font-size: 1.5rem;
-            font-weight: bold;
+            font-size: 1.6rem;
+            font-weight: 700;
             color: #667eea;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.8rem;
+            letter-spacing: -0.5px;
         }
         .schedule-details {
             display: flex;
             justify-content: space-between;
-            font-size: 0.9rem;
-            color: #666;
-            gap: 1rem;
+            font-size: 0.85rem;
+            color: #555;
+            gap: 1.5rem;
+            font-weight: 500;
         }
         .schedule-status {
-            padding: 0.3rem 0.8rem;
-            border-radius: 4px;
-            font-weight: bold;
-            font-size: 0.85rem;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
         }
         .status-on-time {
-            background-color: #d4edda;
-            color: #155724;
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
         }
         .status-delayed {
-            background-color: #fff3cd;
-            color: #856404;
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffe0b2;
         }
         .no-line-selected {
             text-align: center;
@@ -219,33 +268,49 @@
         }
         .info-badge {
             display: inline-block;
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 0.3rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
+            padding: 0.4rem 0.9rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
             margin-top: 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
         }
         .tab-buttons {
             display: flex;
-            gap: 1rem;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid #ddd;
+            gap: 0;
+            margin-bottom: 2rem;
+            border-bottom: 2px solid #f0f0f0;
+            background: white;
+            border-radius: 12px 12px 0 0;
+            padding: 0.5rem;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
         }
         .tab-btn {
-            padding: 1rem;
+            padding: 1rem 1.8rem;
             border: none;
-            background: none;
+            background: transparent;
             cursor: pointer;
-            font-size: 1rem;
-            font-weight: bold;
-            color: #999;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #666;
             border-bottom: 3px solid transparent;
-            transition: all 0.3s;
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 0;
+        }
+        .tab-btn:hover {
+            color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
         }
         .tab-btn.active {
             color: #667eea;
             border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.08);
         }
         .tab-content {
             display: none;
@@ -260,49 +325,77 @@
         }
         .station-search input {
             flex: 1;
-            padding: 0.8rem;
-            border: 2px solid #ddd;
-            border-radius: 5px;
-            font-size: 1rem;
+            padding: 1rem 1.2rem;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+        }
+        .station-search input:focus {
+            border-color: #667eea;
+            background-color: #fff;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
         .station-search button {
-            padding: 0.8rem 1.5rem;
-            background: #667eea;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            border-radius: 5px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
-            transition: background 0.3s;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-size: 0.9rem;
         }
         .station-search button:hover {
-            background: #764ba2;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+        .station-search button:active {
+            transform: translateY(0);
         }
         .station-details {
-            background: linear-gradient(135deg, #f5f5f5 0%, #efefef 100%);
-            padding: 1.5rem;
-            border-radius: 8px;
+            background: #f8f8f8;
+            padding: 2rem;
+            border-radius: 12px;
             margin-bottom: 1.5rem;
+            border: 1px solid #f0f0f0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
         }
         .station-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid #667eea;
-            padding-bottom: 1rem;
+            margin-bottom: 1.8rem;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 1.2rem;
         }
         .station-name-large {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #333;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            letter-spacing: -0.5px;
         }
         .zone-badge {
-            background: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
-            padding: 0.4rem 0.8rem;
-            border-radius: 4px;
-            font-weight: bold;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            font-weight: 700;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .station-lines {
+            display: flex;
+            gap: 0.8rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
         }
         .station-lines {
             display: flex;
@@ -311,11 +404,14 @@
             margin-bottom: 1.5rem;
         }
         .station-line-badge {
-            padding: 0.6rem 1rem;
-            border-radius: 6px;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
             color: white;
-            font-weight: bold;
+            font-weight: 700;
             font-size: 0.9rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
         }
         .services-list {
             display: grid;
@@ -323,61 +419,263 @@
         }
         .service-item {
             background: white;
-            padding: 1.2rem;
-            border-radius: 8px;
+            padding: 1.4rem;
+            border-radius: 10px;
             border-left: 5px solid;
             display: grid;
             grid-template-columns: 1fr 1fr 1fr auto;
-            gap: 1rem;
+            gap: 1.5rem;
             align-items: center;
+            border: 1px solid #f0f0f0;
+            border-left-width: 5px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        .service-item:hover {
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
         }
         .service-item-detail {
             display: flex;
             flex-direction: column;
         }
         .service-label {
-            font-size: 0.85rem;
+            font-size: 0.75rem;
             color: #999;
             text-transform: uppercase;
-            margin-bottom: 0.3rem;
+            margin-bottom: 0.5rem;
+            letter-spacing: 0.5px;
+            font-weight: 600;
         }
         .service-value {
             font-size: 1.1rem;
-            font-weight: bold;
-            color: #333;
+            font-weight: 700;
+            color: #1a1a1a;
         }
         .no-results {
             text-align: center;
-            padding: 2rem;
+            padding: 3rem 2rem;
             color: #999;
-            font-size: 1.1rem;
+            font-size: 1.05rem;
+            font-weight: 500;
         }
         .suggestions-list {
             max-height: 300px;
             overflow-y: auto;
             background: white;
-            border-radius: 5px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-top: 0.5rem;
+            border-radius: 8px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+            margin-top: 0.8rem;
             display: none;
             position: absolute;
             width: calc(100% - 2rem);
             z-index: 10;
+            border: 1px solid #f0f0f0;
         }
         .suggestions-list.active {
             display: block;
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         .suggestion-item {
-            padding: 0.8rem 1rem;
+            padding: 1rem 1.2rem;
             cursor: pointer;
-            border-bottom: 1px solid #eee;
-            transition: background 0.2s;
+            border-bottom: 1px solid #f5f5f5;
+            transition: all 0.2s ease;
+            font-weight: 500;
+            color: #333;
+        }
+        .suggestion-item:last-child {
+            border-bottom: none;
         }
         .suggestion-item:hover {
-            background: #f5f5f5;
+            background: #f9f9f9;
+            padding-left: 1.6rem;
         }
         .station-search-container {
             position: relative;
+        }
+        .live-tracking-container {
+            background: white;
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+            border: 1px solid #f5f5f5;
+        }
+        .trains-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+        }
+        .train-card {
+            background: white;
+            border-radius: 12px;
+            padding: 1.6rem;
+            border-left: 6px solid;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+            border-left-width: 6px;
+        }
+        .train-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+        }
+        .train-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            border-bottom: 2px solid;
+            padding-bottom: 1rem;
+        }
+        .train-line-badge {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .train-status {
+            font-weight: 700;
+            padding: 0.6rem 1rem;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .status-running {
+            background-color: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        .status-delayed-train {
+            background-color: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffe0b2;
+        }
+        .train-info {
+            display: grid;
+            gap: 0.8rem;
+            margin-bottom: 1.2rem;
+            font-size: 0.95rem;
+        }
+        .train-info-item {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 0.5rem;
+        }
+        .train-info-label {
+            font-weight: 700;
+            color: #666;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+        .train-info-value {
+            color: #1a1a1a;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+        .progress-bar-container {
+            background: #e8e8e8;
+            border-radius: 10px;
+            height: 14px;
+            overflow: hidden;
+            margin: 1.2rem 0;
+            border: 1px solid #ddd;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+        }
+        .progress-bar {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .passenger-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.9rem 1.2rem;
+            background: #f9f9f9;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #e0e0e0;
+        }
+        .passenger-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: inline-block;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .very-busy {
+            background: #dc241f;
+        }
+        .busy {
+            background: #ffce00;
+        }
+        .moderate {
+            background: #00a0e2;
+        }
+        .quiet {
+            background: #00aa00;
+        }
+        .no-trains {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: #999;
+            font-size: 1.1rem;
+        }
+        .tracking-status {
+            text-align: center;
+            padding: 1.2rem;
+            margin-bottom: 1.5rem;
+            border-radius: 10px;
+            background: #e8f4fd;
+            color: #0d47a1;
+            font-size: 0.95rem;
+            font-weight: 600;
+            border: 1px solid #b3e5fc;
+        }
+        .tracking-status.connected {
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+        .tracking-status.disconnected {
+            background: #fff3e0;
+            color: #e65100;
+            border: 1px solid #ffe0b2;
+        }
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #2e7d32;
+            border-radius: 50%;
+            margin-right: 0.8rem;
+            animation: pulse 2s infinite;
+        }
+        .tracking-status.disconnected .pulse {
+            background: #e65100;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
         }
     </style>
 </head>
@@ -408,6 +706,7 @@
         <div class="tab-buttons">
             <button class="tab-btn active" onclick="switchTab('lines')">Lines & Timetables</button>
             <button class="tab-btn" onclick="switchTab('stations')">Station Information</button>
+            <button class="tab-btn" onclick="switchTab('tracking')">Live Tracking</button>
         </div>
 
         <!-- Lines Tab -->
@@ -442,6 +741,18 @@
             
             <div id="stationInfoContainer">
                 <div class="no-line-selected">Search for a station to view current timetables</div>
+            </div>
+        </div>
+
+        <!-- Live Tracking Tab -->
+        <div id="tracking-tab" class="tab-content">
+            <div class="live-tracking-container">
+                <div class="tracking-status" id="trackingStatus">
+                    <span class="pulse"></span>Connecting to live tracking...
+                </div>
+                <div class="trains-grid" id="trainsContainer">
+                    <div class="no-trains">Loading live train data...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -490,6 +801,7 @@
 
         async function loadData() {
             try {
+                // Try to load local data first, then augment with TfL data
                 const [timetablesRes, stationsRes] = await Promise.all([
                     fetch('/timetables.json'),
                     fetch('/stations-data.json')
@@ -497,14 +809,69 @@
                 timetables = await timetablesRes.json();
                 stationsData = await stationsRes.json();
                 
-                // Create a sorted list of all stations
-                allStations = Object.keys(stationsData.stations).sort();
+                // Try to fetch real TfL lines data
+                try {
+                  const linesRes = await fetch('/api/lines');
+                  if (linesRes.ok) {
+                    const tflLines = await linesRes.json();
+                    console.log('Loaded TfL line data:', tflLines);
+                  }
+                } catch (e) {
+                  console.log('Using local line data');
+                }
+                
+                // Create a sorted list of all stations from both sources
+                const stationSet = new Set();
+                
+                // Add stations from stationsData
+                Object.keys(stationsData.stations).forEach(station => {
+                    stationSet.add(station);
+                });
+                
+                // Add stations from timetables (all lines)
+                Object.keys(timetables).forEach(line => {
+                    if (timetables[line].stations) {
+                        timetables[line].stations.forEach(station => {
+                            stationSet.add(station);
+                        });
+                    }
+                });
+                
+                allStations = Array.from(stationSet).sort();
+                console.log('Loaded', allStations.length, 'stations');
                 
                 renderLines();
                 setupStationSearch();
             } catch (error) {
                 console.error('Error loading data:', error);
             }
+        }
+
+        // Fetch real arrivals from TfL API
+        async function fetchRealArrivals(stopPointId) {
+          try {
+            const res = await fetch(`/api/stoppoint/${stopPointId}/arrivals`);
+            if (res.ok) {
+              return await res.json();
+            }
+          } catch (error) {
+            console.error('Error fetching real arrivals:', error);
+          }
+          return null;
+        }
+
+        // Search station using TfL API
+        async function searchStationWithTfL(query) {
+          try {
+            const res = await fetch(`/api/stoppoint/search?query=${encodeURIComponent(query)}`);
+            if (res.ok) {
+              const results = await res.json();
+              return results.matches || results;
+            }
+          } catch (error) {
+            console.error('Error searching with TfL:', error);
+          }
+          return null;
         }
 
         function renderLines() {
@@ -689,15 +1056,30 @@
         }
 
         function showStationInfo(stationName) {
-            const stationInfo = stationsData.stations[stationName];
+            let stationInfo = stationsData.stations[stationName];
             
+            // If not in stationsData, build info from timetables
             if (!stationInfo) {
-                document.getElementById('stationInfoContainer').innerHTML = `
-                    <div class="no-results">Station not found. Try another search.</div>
-                `;
-                return;
+                const servingLines = [];
+                Object.keys(timetables).forEach(line => {
+                    if (timetables[line].stations.includes(stationName)) {
+                        servingLines.push(line);
+                    }
+                });
+                
+                if (servingLines.length === 0) {
+                    document.getElementById('stationInfoContainer').innerHTML = `
+                        <div class="no-results">Station not found. Try another search.</div>
+                    `;
+                    return;
+                }
+                
+                stationInfo = {
+                    lines: servingLines,
+                    zone: 1  // Default zone for stations not in stationsData
+                };
             }
-
+            
             const servingLines = stationInfo.lines;
             const zone = stationInfo.zone;
 
@@ -721,7 +1103,9 @@
                 html += `<div class="station-line-badge" style="background-color: ${color};">${line}</div>`;
             });
 
-            html += `</div></div><div class="services-list">`;
+            html += `</div><div style="margin-top: 1rem; padding: 1rem; background: #f0f0f0; border-radius: 6px; font-size: 0.9rem; color: #666;">
+              💡 Tip: This shows local timetable data. For real-time arrivals, use the TfL app or website.
+            </div></div><div class="services-list">`;
 
             // Get all services at this station
             const services = [];
@@ -828,6 +1212,11 @@
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
             event.target.classList.add('active');
+            
+            // Refresh tracking when tab is opened
+            if (tabName === 'tracking' && currentTrains.length > 0) {
+                renderLiveTrains();
+            }
         }
 
         document.getElementById('viewMode').addEventListener('change', () => {
@@ -848,8 +1237,168 @@
         updateTime();
         setInterval(updateTime, 1000);
 
-        // Initialize
-        loadData();
+        // Live Tracking with WebSocket
+        let socket = null;
+        let currentTrains = [];
+
+        function initializeWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+            const socketURL = `${protocol}://${window.location.host}`;
+            socket = io(socketURL);
+
+            socket.on('connect', () => {
+                console.log('Connected to live tracking');
+                updateTrackingStatus(true);
+            });
+
+            socket.on('initial-trains', (data) => {
+                console.log('Received initial trains:', data);
+                currentTrains = data.trains || [];
+                renderLiveTrains();
+            });
+
+            socket.on('train-update', (data) => {
+                currentTrains = data.trains || [];
+                renderLiveTrains();
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from live tracking');
+                updateTrackingStatus(false);
+                setTimeout(initializeWebSocket, 3000);
+            });
+
+            socket.on('error', (error) => {
+                console.error('Socket error:', error);
+                updateTrackingStatus(false);
+            });
+        }
+
+        function updateTrackingStatus(connected) {
+            const statusEl = document.getElementById('trackingStatus');
+            if (connected) {
+                statusEl.className = 'tracking-status connected';
+                statusEl.innerHTML = '<span class="pulse"></span>Live tracking connected - Real-time updates active';
+            } else {
+                statusEl.className = 'tracking-status disconnected';
+                statusEl.innerHTML = '<span class="pulse"></span>Attempting to reconnect...';
+            }
+        }
+
+        function renderLiveTrains() {
+            const container = document.getElementById('trainsContainer');
+            
+            if (!currentTrains || currentTrains.length === 0) {
+                container.innerHTML = '<div class="no-trains">No trains currently tracking</div>';
+                return;
+            }
+
+            // Sort trains by line
+            const trainsByLine = {};
+            currentTrains.forEach(train => {
+                if (!trainsByLine[train.line]) {
+                    trainsByLine[train.line] = [];
+                }
+                trainsByLine[train.line].push(train);
+            });
+
+            let html = '';
+
+            Object.keys(trainsByLine).sort().forEach(line => {
+                trainsByLine[line].forEach(train => {
+                    const colorClass = lineColors[train.line] || 'central';
+                    const color = colorHexMap[colorClass];
+                    const passengerColor = getPassengerColor(train.passengers);
+                    const progressColor = getProgressColor(train.progress);
+                    
+                    html += `
+                        <div class="train-card" style="border-left-color: ${color};">
+                            <div class="train-header" style="border-bottom-color: ${color};">
+                                <div class="train-line-badge" style="background-color: ${color};">
+                                    ${train.line}
+                                </div>
+                                <div class="train-status ${train.status === 'Running' ? 'status-running' : 'status-delayed-train'}">
+                                    ${train.status}
+                                </div>
+                            </div>
+                            <div class="train-info">
+                                <div class="train-info-item">
+                                    <span class="train-info-label">Train ID:</span>
+                                    <span class="train-info-value">${train.id}</span>
+                                </div>
+                                <div class="train-info-item">
+                                    <span class="train-info-label">Destination:</span>
+                                    <span class="train-info-value">${train.destination}</span>
+                                </div>
+                                <div class="train-info-item">
+                                    <span class="train-info-label">Next Station:</span>
+                                    <span class="train-info-value">${train.nextStation}</span>
+                                </div>
+                                <div class="train-info-item">
+                                    <span class="train-info-label">Position:</span>
+                                    <span class="train-info-value">${train.currentPosition} of ~${getLineStationCount(train.line)} stations</span>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="train-info-label" style="margin-bottom: 0.5rem;">Distance to Next Station</div>
+                                <div class="progress-bar-container">
+                                    <div class="progress-bar" style="width: ${train.progress}%; background-color: ${progressColor};"></div>
+                                </div>
+                                <div style="text-align: center; font-size: 0.85rem; color: #666; margin-top: 0.5rem;">
+                                    ${Math.round(train.progress)}% complete
+                                </div>
+                            </div>
+                            <div class="passenger-indicator">
+                                <span class="passenger-dot ${passengerColor}"></span>
+                                <span>${train.passengers}</span>
+                            </div>
+                        </div>
+                    `;
+                });
+            });
+
+            container.innerHTML = html || '<div class="no-trains">No trains available</div>';
+        }
+
+        function getLineStationCount(line) {
+            if (timetables[line]) {
+                return timetables[line].stations.length;
+            }
+            return 0;
+        }
+
+        function getPassengerColor(level) {
+            const levels = {
+                'Very Busy': 'very-busy',
+                'Busy': 'busy',
+                'Moderate': 'moderate',
+                'Quiet': 'quiet'
+            };
+            return levels[level] || 'moderate';
+        }
+
+        function getProgressColor(progress) {
+            if (progress < 33) return '#00aa00';
+            if (progress < 66) return '#ffce00';
+            return '#dc241f';
+        }
+
+        // Initialize WebSocket connection when page loads
+        window.addEventListener('load', () => {
+            // Load timetable data
+            loadData();
+            
+            setTimeout(() => {
+                // Load socket.io library dynamically
+                const script = document.createElement('script');
+                script.src = '/socket.io/socket.io.js';
+                script.onload = () => {
+                    initializeWebSocket();
+                };
+                document.head.appendChild(script);
+            }, 500);
+        });
+
     </script>
 </body>
 </html>

@@ -1,0 +1,92 @@
+{
+  "trains": [
+    {
+      "id": "T001",
+      "line": "Central",
+      "currentPosition": 5,
+      "destination": "Stratford",
+      "status": "Running",
+      "nextStation": "White City",
+      "progress": 45,
+      "passengers": "Moderate",
+      "arrivedAt": "2026-04-30T10:32:00Z"
+    },
+    {
+      "id": "T002",
+      "line": "Central",
+      "currentPosition": 12,
+      "destination": "Ealing Broadway",
+      "status": "Running",
+      "nextStation": "Holborn",
+      "progress": 20,
+      "passengers": "Busy",
+      "arrivedAt": "2026-04-30T10:33:15Z"
+    },
+    {
+      "id": "T003",
+      "line": "Bakerloo",
+      "currentPosition": 8,
+      "destination": "Elephant & Castle",
+      "status": "Running",
+      "nextStation": "Baker Street",
+      "progress": 65,
+      "passengers": "Quiet",
+      "arrivedAt": "2026-04-30T10:34:30Z"
+    },
+    {
+      "id": "T004",
+      "line": "Bakerloo",
+      "currentPosition": 18,
+      "destination": "Harrow & Wealdstone",
+      "status": "Running",
+      "nextStation": "Charing Cross",
+      "progress": 30,
+      "passengers": "Moderate",
+      "arrivedAt": "2026-04-30T10:35:45Z"
+    },
+    {
+      "id": "T005",
+      "line": "District",
+      "currentPosition": 3,
+      "destination": "Wimbledon",
+      "status": "Running",
+      "nextStation": "East Ham",
+      "progress": 10,
+      "passengers": "Very Busy",
+      "arrivedAt": "2026-04-30T10:30:00Z"
+    },
+    {
+      "id": "T006",
+      "line": "District",
+      "currentPosition": 25,
+      "destination": "Upminster",
+      "status": "Running",
+      "nextStation": "Victoria",
+      "progress": 55,
+      "passengers": "Moderate",
+      "arrivedAt": "2026-04-30T10:36:20Z"
+    },
+    {
+      "id": "T007",
+      "line": "Northern",
+      "currentPosition": 15,
+      "destination": "Edgware",
+      "status": "Delayed",
+      "nextStation": "Leicester Square",
+      "progress": 75,
+      "passengers": "Busy",
+      "arrivedAt": "2026-04-30T10:37:10Z"
+    },
+    {
+      "id": "T008",
+      "line": "Jubilee",
+      "currentPosition": 9,
+      "destination": "Stratford",
+      "status": "Running",
+      "nextStation": "Swiss Cottage",
+      "progress": 40,
+      "passengers": "Quiet",
+      "arrivedAt": "2026-04-30T10:38:00Z"
+    }
+  ]
+}
