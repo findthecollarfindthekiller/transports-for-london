@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>London Underground Timetable</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
     <style>
         * {
             margin: 0;
@@ -11,91 +13,117 @@
             box-sizing: border-box;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecf1 100%);
             min-height: 100vh;
+            color: #1a1a1a;
+            font-feature-settings: 'kern' 1;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
         }
         header {
-            background-color: #1a1a1a;
+            background: linear-gradient(135deg, #0f0f1e 0%, #1a1a2e 100%);
             color: white;
-            padding: 2rem;
+            padding: 2.5rem 2rem;
             text-align: center;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
         }
         h1 {
-            font-size: 2.5rem;
-            margin-bottom: 0.5rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            font-size: 2.8rem;
+            margin-bottom: 0.6rem;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 0%, #e0e7ff 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         .time-display {
-            font-size: 1.2rem;
-            color: #ffcc00;
-            font-weight: bold;
+            font-size: 1rem;
+            color: #a0aec0;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
         .container {
             max-width: 1400px;
-            margin: 2rem auto;
-            padding: 0 1rem;
+            margin: 2.5rem auto;
+            padding: 0 1.5rem;
         }
         .controls {
             background: white;
-            border-radius: 12px;
-            padding: 1.8rem;
+            border-radius: 16px;
+            padding: 2rem;
             margin-bottom: 2rem;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
-            display: flex;
-            gap: 2rem;
-            flex-wrap: wrap;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
             align-items: center;
-            border: 1px solid #f0f0f0;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s ease;
+        }
+        .controls:hover {
+            box-shadow: 0 12px 48px rgba(0, 0, 0, 0.1);
         }
         .control-group {
             display: flex;
-            gap: 0.8rem;
-            align-items: center;
+            flex-direction: column;
+            gap: 0.6rem;
         }
         .control-group label {
-            font-weight: 600;
+            font-weight: 700;
             color: #1a1a1a;
-            font-size: 1rem;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #666;
         }
         select, input {
-            padding: 0.85rem 1rem;
-            border: 2px solid #e0e0e0;
-            border-radius: 8px;
+            padding: 0.95rem 1.2rem;
+            border: 2px solid #e8e8e8;
+            border-radius: 10px;
             font-size: 0.95rem;
             cursor: pointer;
             transition: all 0.3s ease;
-            background-color: #fafafa;
+            background-color: #fafbfc;
             font-weight: 500;
+            color: #1a1a1a;
         }
         select:hover, input:hover {
-            border-color: #c0c0c0;
-            background-color: #fff;
+            border-color: #cbd5e1;
+            background-color: #f8f9fa;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
         }
         select:focus, input:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #6366f1;
             background-color: #fff;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1), 0 4px 12px rgba(99, 102, 241, 0.15);
         }
         .lines-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 1.2rem;
+            margin-bottom: 2.5rem;
         }
         .line-btn {
-            padding: 1.3rem 1.5rem;
+            padding: 1.4rem 1.6rem;
             border: none;
-            border-radius: 10px;
+            border-radius: 12px;
             color: white;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
             position: relative;
             overflow: hidden;
+            letter-spacing: 0.03em;
         }
         .line-btn::before {
             content: '';
@@ -104,142 +132,149 @@
             left: -100%;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.2);
-            transition: left 0.3s ease;
+            background: rgba(255, 255, 255, 0.25);
+            transition: left 0.35s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .line-btn:hover::before {
             left: 100%;
         }
         .line-btn:hover {
-            transform: translateY(-6px);
-            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.25);
-            filter: brightness(1.08);
+            transform: translateY(-4px);
+            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.2);
+            filter: brightness(1.1);
         }
         .line-btn.active {
-            box-shadow: 0 14px 32px rgba(0, 0, 0, 0.3);
-            transform: translateY(-8px) scale(1.03);
-            outline: 3px solid white;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+            transform: translateY(-6px) scale(1.05);
+            outline: 3px solid rgba(255, 255, 255, 0.8);
             outline-offset: 2px;
         }
-        .bakerloo { background-color: #894e24; }
-        .central { background-color: #dc241f; }
-        .circle { background-color: #ffce00; color: #333; }
-        .district { background-color: #007229; }
-        .hammersmith { background-color: #d799af; }
-        .jubilee { background-color: #6a7278; }
-        .metropolitan { background-color: #751056; }
+        .bakerloo { background-color: #B36305; }
+        .central { background-color: #E32017; }
+        .circle { background-color: #FFD300; color: #333; }
+        .district { background-color: #00782A; }
+        .hammersmith { background-color: #F3A9BB; color: #333; }
+        .jubilee { background-color: #6A7278; }
+        .metropolitan { background-color: #9B0056; }
         .northern { background-color: #000000; }
-        .piccadilly { background-color: #0019a8; }
-        .victoria { background-color: #00a0e2; }
-        .waterloo { background-color: #76d0bd; }
+        .piccadilly { background-color: #0019A8; }
+        .victoria { background-color: #00A0E2; }
+        .waterloo { background-color: #95CDBA; color: #333; }
         .main-content {
             display: grid;
             grid-template-columns: 1fr 2fr;
-            gap: 2rem;
+            gap: 2.5rem;
         }
         .stations-container, .schedules-container {
             background-color: white;
-            border-radius: 12px;
-            padding: 2.2rem;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
-            border: 1px solid #f5f5f5;
-            transition: box-shadow 0.3s ease;
+            border-radius: 16px;
+            padding: 2.4rem;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .stations-container:hover, .schedules-container:hover {
-            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+            box-shadow: 0 14px 48px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
         }
         .stations-container h3, .schedules-container h3 {
             margin-bottom: 1.8rem;
-            font-size: 1.3rem;
+            font-size: 1.4rem;
             color: #1a1a1a;
             border-bottom: 3px solid;
             padding-bottom: 1rem;
             font-weight: 700;
+            letter-spacing: 0.03em;
         }
         .stations-list {
             display: grid;
             gap: 0.8rem;
             max-height: 600px;
             overflow-y: auto;
+            padding-right: 0.5rem;
         }
         .station {
-            padding: 1rem;
-            border-radius: 8px;
-            background-color: #f8f8f8;
+            padding: 1.1rem 1.3rem;
+            border-radius: 10px;
+            background-color: #fafbfc;
             border-left: 4px solid;
             cursor: pointer;
-            transition: all 0.3s ease;
-            border: 1px solid #f0f0f0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #e8e8e8;
             border-left-width: 4px;
         }
         .station:hover {
             transform: translateX(6px);
-            background-color: #f5f5f5;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            background-color: #f0f4f8;
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+            border-color: transparent;
         }
         .station-name {
             font-weight: 600;
             color: #1a1a1a;
             font-size: 0.95rem;
+            letter-spacing: 0.01em;
         }
         .schedules-list {
             display: grid;
-            gap: 1rem;
+            gap: 1.2rem;
             max-height: 600px;
             overflow-y: auto;
+            padding-right: 0.5rem;
         }
         .schedule-item {
-            padding: 1.3rem;
-            border-radius: 10px;
-            background: #f9f9f9;
+            padding: 1.4rem;
+            border-radius: 12px;
+            background: #fafbfc;
             border-left: 5px solid;
-            transition: all 0.3s ease;
-            border: 1px solid #f0f0f0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid #e8e8e8;
             border-left-width: 5px;
         }
         .schedule-item:hover {
-            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            transform: translateY(-3px);
+            border-color: transparent;
         }
         .schedule-item.next-departure {
-            background: linear-gradient(135deg, #fffbf0 0%, #fffaf5 100%);
-            border-left-color: #ffcc00;
-            box-shadow: 0 8px 20px rgba(255, 204, 0, 0.25);
-            transform: scale(1.02) translateY(-2px);
+            background: linear-gradient(135deg, #fffbf0 0%, #fffbf0 100%);
+            border-left-color: #f59e0b;
+            box-shadow: 0 10px 28px rgba(245, 158, 11, 0.2);
+            transform: scale(1.02) translateY(-3px);
         }
         .schedule-time {
-            font-size: 1.6rem;
-            font-weight: 700;
-            color: #667eea;
+            font-size: 1.7rem;
+            font-weight: 800;
+            color: #6366f1;
             margin-bottom: 0.8rem;
-            letter-spacing: -0.5px;
+            letter-spacing: -0.02em;
         }
         .schedule-details {
             display: flex;
             justify-content: space-between;
-            font-size: 0.85rem;
-            color: #555;
+            font-size: 0.9rem;
+            color: #64748b;
             gap: 1.5rem;
             font-weight: 500;
         }
         .schedule-status {
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-weight: 600;
-            font-size: 0.8rem;
+            padding: 0.6rem 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.08em;
             display: inline-block;
         }
         .status-on-time {
-            background-color: #e8f5e9;
-            color: #2e7d32;
-            border: 1px solid #c8e6c9;
+            background-color: #ecfdf5;
+            color: #047857;
+            border: 1px solid #d1fae5;
         }
         .status-delayed {
-            background-color: #fff3e0;
-            color: #e65100;
-            border: 1px solid #ffe0b2;
+            background-color: #fef3c7;
+            color: #b45309;
+            border: 1px solid #fde68a;
         }
         .no-line-selected {
             text-align: center;
@@ -296,12 +331,14 @@
             background: transparent;
             cursor: pointer;
             font-size: 0.95rem;
-            font-weight: 600;
+            font-weight: 700;
             color: #666;
             border-bottom: 3px solid transparent;
             transition: all 0.3s ease;
             position: relative;
             margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
         }
         .tab-btn:hover {
             color: #667eea;
@@ -378,7 +415,8 @@
             font-size: 2rem;
             font-weight: 700;
             color: #1a1a1a;
-            letter-spacing: -0.5px;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
         .zone-badge {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -661,6 +699,83 @@
             color: #e65100;
             border: 1px solid #ffe0b2;
         }
+        .status-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.2rem;
+            padding: 1.3rem 1.6rem;
+            border-radius: 14px;
+            margin-bottom: 2rem;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 0.03em;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .status-banner.hidden {
+            display: none;
+        }
+        .status-banner.healthy {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        .status-banner.minor {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+            color: white;
+        }
+        .status-banner.disrupted {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        .status-banner-left {
+            display: flex;
+            align-items: center;
+            gap: 0.9rem;
+        }
+        .status-icon {
+            display: inline-flex;
+            width: 1.2rem;
+            height: 1.2rem;
+            border-radius: 50%;
+            background: white;
+            color: #111;
+            font-size: 0.95rem;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 0 4px rgba(255,255,255,0.15);
+        }
+        .status-banner-title {
+            font-size: 1rem;
+            margin-bottom: 0.15rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .status-banner-message {
+            font-size: 0.9rem;
+        }
+        .status-banner span,
+        .status-banner strong {
+            display: block;
+        }
+        .status-banner span {
+            font-size: 0.95rem;
+        }
+        .status-banner strong {
+            font-size: 1.05rem;
+        }
+        .station-map,
+        .tracking-map {
+            width: 100%;
+            min-height: 320px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+        .tracking-map-container {
+            margin-bottom: 1.5rem;
+        }
         .pulse {
             display: inline-block;
             width: 8px;
@@ -682,7 +797,7 @@
 <body>
     <header>
         <h1>🚇 London Underground Timetable</h1>
-        <div class="time-display">Current Time: <span id="currentTime">--:--</span></div>
+        <div class="time-display">London Time: <span id="currentTime">--:--</span></div>
     </header>
     <div class="container">
         <div class="controls">
@@ -703,10 +818,20 @@
             </div>
         </div>
 
+        <div id="statusBanner" class="status-banner hidden">
+            <div class="status-banner-left">
+                <span id="statusIcon" class="status-icon">●</span>
+                <div>
+                    <div class="status-banner-title" id="statusLabel">TfL status</div>
+                    <div class="status-banner-message" id="statusMessage">Select a line or station to view live TfL status.</div>
+                </div>
+            </div>
+        </div>
+
         <div class="tab-buttons">
-            <button class="tab-btn active" onclick="switchTab('lines')">Lines & Timetables</button>
-            <button class="tab-btn" onclick="switchTab('stations')">Station Information</button>
-            <button class="tab-btn" onclick="switchTab('tracking')">Live Tracking</button>
+            <button class="tab-btn active" data-tab="lines" onclick="switchTab('lines')">Lines & Timetables</button>
+            <button class="tab-btn" data-tab="stations" onclick="switchTab('stations')">Station Information</button>
+            <button class="tab-btn" data-tab="tracking" onclick="switchTab('tracking')">Live Tracking</button>
         </div>
 
         <!-- Lines Tab -->
@@ -750,6 +875,9 @@
                 <div class="tracking-status" id="trackingStatus">
                     <span class="pulse"></span>Connecting to live tracking...
                 </div>
+                <div class="tracking-map-container">
+                    <div id="trackingMap" class="tracking-map"></div>
+                </div>
                 <div class="trains-grid" id="trainsContainer">
                     <div class="no-trains">Loading live train data...</div>
                 </div>
@@ -773,30 +901,62 @@
         };
 
         const colorHexMap = {
-            'bakerloo': '#894e24',
-            'central': '#dc241f',
-            'circle': '#ffce00',
-            'district': '#007229',
-            'hammersmith': '#d799af',
-            'jubilee': '#6a7278',
-            'metropolitan': '#751056',
+            'bakerloo': '#B36305',
+            'central': '#E32017',
+            'circle': '#FFD300',
+            'district': '#00782A',
+            'hammersmith': '#F3A9BB',
+            'jubilee': '#6A7278',
+            'metropolitan': '#9B0056',
             'northern': '#000000',
-            'piccadilly': '#0019a8',
-            'victoria': '#00a0e2',
-            'waterloo': '#76d0bd'
+            'piccadilly': '#0019A8',
+            'victoria': '#00A0E2',
+            'waterloo': '#95CDBA'
         };
 
         let timetables = {};
         let stationsData = {};
         let activeLineIndex = -1;
         let activeLine = null;
+        const tflLineIds = {
+            'Waterloo': 'waterloo-city',
+            'Hammersmith': 'hammersmith-city',
+            'Piccadilly': 'piccadilly',
+            'Victoria': 'victoria',
+            'Metropolitan': 'metropolitan',
+            'District': 'district',
+            'Central': 'central',
+            'Bakerloo': 'bakerloo',
+            'Circle': 'circle',
+            'Northern': 'northern',
+            'Jubilee': 'jubilee'
+        };
         let allStations = [];
+        let stationMap = null;
+        let stationMarker = null;
+        let stationRouteLayers = [];
+        let trackingMap = null;
+        let trackingMarkers = [];
+        let trackingRouteLayers = [];
+        const stationCoordinateCache = {};
+        const lineStationCoordsCache = {};
 
         function updateTime() {
             const now = new Date();
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            document.getElementById('currentTime').textContent = `${hours}:${minutes}`;
+            let londonTime;
+            try {
+                londonTime = now.toLocaleTimeString('en-GB', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false,
+                    timeZone: 'Europe/London'
+                });
+            } catch (e) {
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                londonTime = `${hours}:${minutes}`;
+            }
+            document.getElementById('currentTime').textContent = londonTime;
         }
 
         async function loadData() {
@@ -874,6 +1034,149 @@
           return null;
         }
 
+        async function getStopPointCoords(stationName) {
+          if (stationCoordinateCache[stationName]) {
+            return stationCoordinateCache[stationName];
+          }
+          const matches = await searchStationWithTfL(stationName);
+          if (!matches || !matches.length) return null;
+          const exactMatch = matches.find(item => item.name && item.name.toLowerCase() === stationName.toLowerCase());
+          const tubeMatch = matches.find(item => item.modes && item.modes.includes('tube'));
+          const match = exactMatch || tubeMatch || matches[0];
+          if (match && match.lat != null && match.lon != null) {
+            stationCoordinateCache[stationName] = { lat: match.lat, lon: match.lon };
+            return stationCoordinateCache[stationName];
+          }
+          return null;
+        }
+
+        async function getLineRouteCoords(lineName) {
+          if (lineStationCoordsCache[lineName]) {
+            return lineStationCoordsCache[lineName];
+          }
+          const stationNames = timetables[lineName]?.stations || [];
+          const results = await Promise.allSettled(stationNames.map(name => getStopPointCoords(name)));
+          const coords = results
+            .map((result, index) => result.status === 'fulfilled' ? result.value : null)
+            .filter(Boolean);
+          lineStationCoordsCache[lineName] = coords;
+          return coords;
+        }
+
+        async function drawLineRouteOnMap(lineName, map, color) {
+          if (!map || !timetables[lineName]) return null;
+          const coords = await getLineRouteCoords(lineName);
+          if (!coords || coords.length < 2) return null;
+          const dashArray = ['Circle', 'District', 'Hammersmith', 'Metropolitan'].includes(lineName) ? '12, 10' : '8, 8';
+          const polyline = L.polyline(coords.map(coord => [coord.lat, coord.lon]), {
+            color,
+            weight: 7,
+            opacity: 0.95,
+            dashArray,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+
+          // Soft glow underline for stronger tube route presentation
+          L.polyline(coords.map(coord => [coord.lat, coord.lon]), {
+            color: color,
+            weight: 14,
+            opacity: 0.15,
+            lineCap: 'round',
+            lineJoin: 'round'
+          }).addTo(map);
+
+          return polyline;
+        }
+
+        function clearLayerGroup(layers) {
+          layers.forEach(layer => {
+            if (layer && layer.remove) {
+              layer.remove();
+            }
+          });
+          layers.length = 0;
+        }
+
+        function initializeMaps() {
+          const stationMapElement = document.getElementById('stationMap');
+          if (stationMapElement && !stationMap) {
+            stationMap = L.map('stationMap', { center: [51.5074, -0.1278], zoom: 12, attributionControl: false });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(stationMap);
+          }
+
+          const trackingMapElement = document.getElementById('trackingMap');
+          if (trackingMapElement && !trackingMap) {
+            trackingMap = L.map('trackingMap', { center: [51.5074, -0.1278], zoom: 10, attributionControl: false });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(trackingMap);
+          }
+        }
+
+        async function updateStationMap(lat, lon, label, lines = []) {
+          if (!stationMap) return;
+          clearLayerGroup(stationRouteLayers);
+          stationMap.setView([lat, lon], 13);
+          if (stationMarker) {
+            stationMap.removeLayer(stationMarker);
+          }
+          stationMarker = L.marker([lat, lon]).addTo(stationMap).bindPopup(`<strong>${label}</strong>`).openPopup();
+
+          for (const line of lines.slice(0, 3)) {
+            const color = colorHexMap[lineColors[line] || 'central'];
+            const route = await drawLineRouteOnMap(line, stationMap, color);
+            if (route) {
+              stationRouteLayers.push(route);
+            }
+          }
+          stationMap.invalidateSize();
+        }
+
+        async function updateTrackingMap() {
+          if (!trackingMap) return;
+          trackingMarkers.forEach(marker => trackingMap.removeLayer(marker));
+          trackingMarkers = [];
+          clearLayerGroup(trackingRouteLayers);
+
+          const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))].slice(0, 5);
+          for (const line of uniqueLines) {
+            const color = colorHexMap[lineColors[line] || 'central'];
+            const route = await drawLineRouteOnMap(line, trackingMap, color);
+            if (route) {
+              trackingRouteLayers.push(route);
+            }
+          }
+
+          const uniqueStations = [...new Set(currentTrains.map(train => train.nextStation).filter(Boolean))].slice(0, 15);
+          const bounds = [];
+
+          for (const stationName of uniqueStations) {
+            const coords = await getStopPointCoords(stationName);
+            if (coords) {
+              const marker = L.circleMarker([coords.lat, coords.lon], {
+                radius: 7,
+                fillColor: '#ff5722',
+                color: '#ffffff',
+                weight: 2,
+                fillOpacity: 0.9
+              }).addTo(trackingMap);
+              marker.bindPopup(`<strong>${stationName}</strong><br/>Next arrival at ${stationName}`);
+              trackingMarkers.push(marker);
+              bounds.push([coords.lat, coords.lon]);
+            }
+          }
+
+          if (bounds.length) {
+            trackingMap.fitBounds(bounds, { padding: [40, 40] });
+          }
+          trackingMap.invalidateSize();
+        }
+
         function renderLines() {
             const linesContainer = document.getElementById('linesContainer');
             linesContainer.innerHTML = '';
@@ -888,13 +1191,14 @@
             });
         }
 
-        function selectLine(line, index) {
+        async function selectLine(line, index) {
             activeLine = line;
             activeLineIndex = index;
             const data = timetables[line];
             
             renderStations(data.stations, line);
             renderSchedules(data.schedules, line);
+            await renderLineStatus(line);
             
             document.querySelectorAll('.line-btn').forEach((btn, idx) => {
                 btn.classList.toggle('active', idx === index);
@@ -950,7 +1254,7 @@
             let filteredSchedules = schedules;
             
             if (viewMode === 'next') {
-                filteredSchedules = getNextDepartures(schedules, 3);
+                filteredSchedules = getNextDepartures(schedules, 6);
             } else if (viewMode === 'ontime') {
                 filteredSchedules = schedules.filter(s => s.status === 'On Time');
             }
@@ -1004,6 +1308,131 @@
                     return scheduleMinutes >= currentMinutes;
                 })
                 .slice(0, count);
+        }
+
+        function hideStatusBanner() {
+            const statusBanner = document.getElementById('statusBanner');
+            statusBanner.className = 'status-banner hidden';
+        }
+
+        function setStatusBannerStyle(statusClass) {
+            const statusBanner = document.getElementById('statusBanner');
+            const statusIcon = document.getElementById('statusIcon');
+            statusBanner.className = `status-banner ${statusClass}`;
+            if (statusClass === 'healthy') {
+                statusIcon.textContent = '✓';
+            } else if (statusClass === 'minor') {
+                statusIcon.textContent = '⚠';
+            } else {
+                statusIcon.textContent = '✕';
+            }
+        }
+
+        function setStatusBannerText(title, message) {
+            document.getElementById('statusLabel').textContent = title;
+            document.getElementById('statusMessage').textContent = message;
+            document.getElementById('statusBanner').classList.remove('hidden');
+        }
+
+        async function fetchLineStatus(line) {
+            const lineId = tflLineIds[line] || line.toLowerCase().replace(/\s+/g, '-');
+            const res = await fetch(`/api/line/${encodeURIComponent(lineId)}/status`);
+            if (!res.ok) throw new Error('Status fetch failed');
+            const data = await res.json();
+            
+            // Handle both array and object responses
+            const statusInfo = Array.isArray(data) ? data[0] : data;
+            
+            if (!statusInfo) {
+                throw new Error('Empty status response');
+            }
+            
+            // Extract status info
+            let lineStatus = 'Unknown';
+            let reason = '';
+            
+            if (statusInfo.lineStatuses && statusInfo.lineStatuses.length > 0) {
+                lineStatus = statusInfo.lineStatuses[0].statusSeverityDescription || 'Unknown';
+                reason = statusInfo.lineStatuses[0].reason || '';
+            } else if (statusInfo.statusSeverityDescription) {
+                lineStatus = statusInfo.statusSeverityDescription;
+                reason = statusInfo.reason || '';
+            }
+            
+            return { line, status: lineStatus, reason };
+        }
+
+        async function renderLineStatus(line) {
+            setStatusBannerText(`${line} line status`, 'Fetching live TfL status…');
+            setStatusBannerStyle('healthy');
+            try {
+                const status = await fetchLineStatus(line);
+                const normalized = status.status.toLowerCase();
+                
+                // Classify status based on TfL severity descriptions
+                let statusClass = 'healthy';
+                if (normalized.includes('good service')) {
+                    statusClass = 'healthy';
+                } else if (normalized.includes('minor') || normalized.includes('part suspension') || normalized.includes('reduced') || normalized.includes('planned closure')) {
+                    statusClass = 'minor';
+                } else if (normalized.includes('severe') || normalized.includes('major') || normalized.includes('suspended') || normalized.includes('disrupted') || normalized.includes('closure')) {
+                    statusClass = 'disrupted';
+                } else {
+                    statusClass = 'minor'; // Default to minor for unknown statuses
+                }
+                
+                setStatusBannerStyle(statusClass);
+                const message = status.reason || status.status || 'Status unavailable';
+                setStatusBannerText(`${line} line status`, message);
+            } catch (error) {
+                setStatusBannerStyle('disrupted');
+                setStatusBannerText(`${line} line status`, 'Unable to fetch line status right now.');
+                console.error('Line status error:', error);
+            }
+        }
+
+        async function renderStationStatus(lines, stationName) {
+            if (!lines || lines.length === 0) {
+                hideStatusBanner();
+                return;
+            }
+            setStatusBannerText(`${stationName} station status`, `Fetching status for ${lines.join(', ')}…`);
+            setStatusBannerStyle('healthy');
+
+            const results = await Promise.allSettled(lines.map(line => fetchLineStatus(line)));
+            const statuses = results.map((result, index) => {
+                if (result.status === 'fulfilled') {
+                    return result.value;
+                }
+                return { line: lines[index], status: 'Unavailable', reason: 'Unable to fetch status' };
+            });
+
+            let overallClass = 'healthy';
+            // Check for disruptions first (highest priority)
+            if (statuses.some(s => {
+                const norm = s.status && s.status.toLowerCase();
+                return norm && (norm.includes('severe') || norm.includes('major') || norm.includes('suspended') || norm.includes('disrupted'));
+            })) {
+                overallClass = 'disrupted';
+            }
+            // Then check for minor issues
+            else if (statuses.some(s => {
+                const norm = s.status && s.status.toLowerCase();
+                return norm && (norm.includes('minor') || norm.includes('part suspension') || norm.includes('reduced') || norm.includes('planned closure'));
+            })) {
+                overallClass = 'minor';
+            }
+            // Otherwise healthy
+            else if (statuses.some(s => {
+                const norm = s.status && s.status.toLowerCase();
+                return norm && norm.includes('good service');
+            })) {
+                overallClass = 'healthy';
+            }
+
+            setStatusBannerStyle(overallClass);
+            const statusSummary = statuses.map(s => `${s.line}: ${s.reason || s.status}`).join(' · ');
+            setStatusBannerText(`${stationName} station status`, statusSummary || 'Status unavailable for selected lines');
         }
 
         function setupStationSearch() {
@@ -1083,6 +1512,10 @@
             const servingLines = stationInfo.lines;
             const zone = stationInfo.zone;
 
+            renderStationStatus(servingLines, stationName).catch(() => {
+                hideStatusBanner();
+            });
+
             let html = `
                 <div class="station-details">
                     <div class="station-header">
@@ -1104,8 +1537,10 @@
             });
 
             html += `</div><div style="margin-top: 1rem; padding: 1rem; background: #f0f0f0; border-radius: 6px; font-size: 0.9rem; color: #666;">
-              💡 Tip: This shows local timetable data. For real-time arrivals, use the TfL app or website.
-            </div></div><div class="services-list">`;
+              💡 Tip: Local timetable data is static. Live arrival predictions in the tracking tab are fetched from TfL.
+            </div></div>
+            <div id="stationMap" class="station-map"></div>
+            <div class="services-list">`;
 
             // Get all services at this station
             const services = [];
@@ -1142,7 +1577,7 @@
             if (services.length === 0) {
                 html += '<div class="no-results">No services found at this station.</div>';
             } else {
-                services.slice(0, 20).forEach((service, idx) => {
+                services.slice(0, 50).forEach((service, idx) => {
                     const [hours, mins] = service.arrivalTime.split(':').map(Number);
                     const serviceMinutes = hours * 60 + mins;
                     const isNext = idx === 0 && serviceMinutes >= currentMinutes;
@@ -1176,6 +1611,14 @@
 
             html += '</div>';
             document.getElementById('stationInfoContainer').innerHTML = html;
+
+            setTimeout(async () => {
+                initializeMaps();
+                const coords = await getStopPointCoords(stationName);
+                if (coords) {
+                    updateStationMap(coords.lat, coords.lon, stationName);
+                }
+            }, 50);
         }
 
         function calculateArrivalTime(stationIndex, totalStations, departure) {
@@ -1211,11 +1654,21 @@
 
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
-            event.target.classList.add('active');
+            const button = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
+            if (button) {
+                button.classList.add('active');
+            }
             
             // Refresh tracking when tab is opened
-            if (tabName === 'tracking' && currentTrains.length > 0) {
-                renderLiveTrains();
+            if (tabName === 'tracking') {
+                setTimeout(() => {
+                    if (trackingMap) {
+                        trackingMap.invalidateSize();
+                    }
+                    if (currentTrains.length > 0) {
+                        renderLiveTrains();
+                    }
+                }, 100);
             }
         }
 
@@ -1338,6 +1791,10 @@
                                     <span class="train-info-label">Position:</span>
                                     <span class="train-info-value">${train.currentPosition} of ~${getLineStationCount(train.line)} stations</span>
                                 </div>
+                                <div class="train-info-item">
+                                    <span class="train-info-label">Arriving in:</span>
+                                    <span class="train-info-value">${train.timeToStation != null ? `${Math.ceil(train.timeToStation / 60)} min` : 'TBC'}</span>
+                                </div>
                             </div>
                             <div>
                                 <div class="train-info-label" style="margin-bottom: 0.5rem;">Distance to Next Station</div>
@@ -1358,6 +1815,9 @@
             });
 
             container.innerHTML = html || '<div class="no-trains">No trains available</div>';
+            setTimeout(() => {
+                updateTrackingMap().catch(console.error);
+            }, 100);
         }
 
         function getLineStationCount(line) {
@@ -1388,6 +1848,7 @@
             // Load timetable data
             loadData();
             
+            initializeMaps();
             setTimeout(() => {
                 // Load socket.io library dynamically
                 const script = document.createElement('script');

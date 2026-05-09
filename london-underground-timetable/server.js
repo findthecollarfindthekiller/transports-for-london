@@ -18,7 +18,8 @@ const TFL_API_BASE = 'https://api.tfl.gov.uk';
 // Using public API without authentication, adding user agent for better compatibility
 const TFL_OPTIONS = {
   headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+    'Accept': 'application/json'
   }
 };
 
@@ -105,7 +106,7 @@ app.get('/api/line/:lineId/status', async (req, res) => {
     res.json(status);
   } catch (error) {
     console.error('Error fetching line status:', error.message);
-    res.json({ status: 'Unknown', message: 'Status unavailable' });
+    res.status(500).json({ error: 'Failed to fetch line status', message: error.message });
   }
 });
 
@@ -115,7 +116,8 @@ app.get('/api/stoppoint/search', async (req, res) => {
     if (!query) {
       return res.status(400).json({ error: 'Query parameter required' });
     }
-    const results = await makeApiRequest(`/StopPoint/Search?query=${encodeURIComponent(query)}`);
+    const queryString = `/StopPoint/Search?query=${encodeURIComponent(query)}&modes=tube`;
+    const results = await makeApiRequest(queryString);
     res.json(results);
   } catch (error) {
     console.error('Error searching stops:', error.message);
@@ -127,7 +129,6 @@ app.get('/api/stoppoint/:stopId/arrivals', async (req, res) => {
   try {
     const { stopId } = req.params;
     const arrivals = await makeApiRequest(`/StopPoint/${stopId}/Arrivals`);
-    // Sort and limit to next 10
     const sorted = arrivals
       .sort((a, b) => a.timeToStation - b.timeToStation)
       .slice(0, 10);
@@ -138,9 +139,55 @@ app.get('/api/stoppoint/:stopId/arrivals', async (req, res) => {
   }
 });
 
-app.get('/api/live-trains', (req, res) => {
-  const trains = require('./public/trains-tracking.json');
-  res.json(trains);
+function normalizeCrowding(crowding) {
+  if (!crowding || typeof crowding !== 'string') {
+    return 'Moderate';
+  }
+  const lower = crowding.toLowerCase();
+  if (lower.includes('severe') || lower.includes('very')) return 'Very Busy';
+  if (lower.includes('busy')) return 'Busy';
+  if (lower.includes('moderate')) return 'Moderate';
+  if (lower.includes('quiet')) return 'Quiet';
+  return 'Moderate';
+}
+
+function mapArrivalToTrain(arrival) {
+  const timeToStation = Number(arrival.timeToStation) || 0;
+  const progress = Math.min(100, Math.max(0, 100 - Math.round((timeToStation / 120) * 100)));
+  return {
+    id: arrival.vehicleId || `${arrival.lineName}-${arrival.platformName || arrival.stationName || arrival.towards}-${arrival.destinationName}`.replace(/\s+/g, '_'),
+    line: arrival.lineName,
+    destination: arrival.destinationName || arrival.towards || 'Unknown',
+    nextStation: arrival.stationName || arrival.platformName || arrival.towards || 'Next stop',
+    currentPosition: 1,
+    progress,
+    status: timeToStation <= 30 ? 'Due' : 'Running',
+    passengers: normalizeCrowding(arrival.crowding),
+    timeToStation,
+    expectedArrival: arrival.expectedArrival
+  };
+}
+
+async function fetchLiveTfLTrains() {
+  const arrivals = await makeApiRequest('/Line/Mode/tube/Arrivals');
+  if (!Array.isArray(arrivals)) {
+    throw new Error('Unexpected TfL arrivals format');
+  }
+  return arrivals
+    .sort((a, b) => (a.timeToStation || 0) - (b.timeToStation || 0))
+    .slice(0, 150)
+    .map(mapArrivalToTrain);
+}
+
+app.get('/api/live-trains', async (req, res) => {
+  try {
+    const trains = await fetchLiveTfLTrains();
+    res.json({ trains });
+  } catch (error) {
+    console.error('Error fetching live trains from TfL:', error.message);
+    const fallback = require('./public/trains-tracking.json');
+    res.json(fallback);
+  }
 });
 
 app.get('/', (req, res) => {
@@ -151,44 +198,31 @@ app.get('/', (req, res) => {
 let liveTrainCache = null;
 let trainUpdateInterval = null;
 
-io.on('connection', (socket) => {
+io.on('connection', async (socket) => {
   console.log('New client connected:', socket.id);
   
-  // Send initial train data
   if (!liveTrainCache) {
-    liveTrainCache = require('./public/trains-tracking.json');
+    try {
+      const trains = await fetchLiveTfLTrains();
+      liveTrainCache = { trains };
+    } catch (error) {
+      console.error('Error loading TfL live trains:', error.message);
+      liveTrainCache = require('./public/trains-tracking.json');
+    }
   }
+
   socket.emit('initial-trains', liveTrainCache);
   
-  // Simulate train movement with real-time updates
   if (!trainUpdateInterval) {
     trainUpdateInterval = setInterval(async () => {
       try {
-        // Fetch real data from TfL for enhanced tracking
-        liveTrainCache = require('./public/trains-tracking.json');
-        
-        // Simulate train movement
-        liveTrainCache.trains.forEach(train => {
-          if (train.status === 'Running') {
-            train.progress += Math.random() * 10 + 5;
-            if (train.progress >= 100) {
-              train.progress = 0;
-              train.currentPosition += 1;
-              const stations = require('./public/stations.json');
-              const lineStations = stations[train.line];
-              if (train.currentPosition >= lineStations.length) {
-                train.currentPosition = 0;
-              }
-              train.nextStation = lineStations[train.currentPosition];
-            }
-          }
-        });
-        
+        const trains = await fetchLiveTfLTrains();
+        liveTrainCache = { trains };
         io.emit('train-update', liveTrainCache);
       } catch (error) {
-        console.error('Error updating trains:', error);
+        console.error('Error updating trains:', error.message);
       }
-    }, 2000);
+    }, 15000);
   }
   
   socket.on('disconnect', () => {
