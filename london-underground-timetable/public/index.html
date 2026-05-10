@@ -154,11 +154,11 @@
         .circle { background-color: #FFD300; color: #333; }
         .district { background-color: #00782A; }
         .hammersmith { background-color: #F3A9BB; color: #333; }
-        .jubilee { background-color: #6A7278; }
+        .jubilee { background-color: #A0A5A9; }
         .metropolitan { background-color: #9B0056; }
         .northern { background-color: #000000; }
-        .piccadilly { background-color: #0019A8; }
-        .victoria { background-color: #00A0E2; }
+        .piccadilly { background-color: #003688; }
+        .victoria { background-color: #0098D4; }
         .waterloo { background-color: #95CDBA; color: #333; }
         .main-content {
             display: grid;
@@ -906,11 +906,11 @@
             'circle': '#FFD300',
             'district': '#00782A',
             'hammersmith': '#F3A9BB',
-            'jubilee': '#6A7278',
+            'jubilee': '#A0A5A9',
             'metropolitan': '#9B0056',
             'northern': '#000000',
-            'piccadilly': '#0019A8',
-            'victoria': '#00A0E2',
+            'piccadilly': '#003688',
+            'victoria': '#0098D4',
             'waterloo': '#95CDBA'
         };
 
@@ -1067,12 +1067,10 @@
           if (!map || !timetables[lineName]) return null;
           const coords = await getLineRouteCoords(lineName);
           if (!coords || coords.length < 2) return null;
-          const dashArray = ['Circle', 'District', 'Hammersmith', 'Metropolitan'].includes(lineName) ? '12, 10' : '8, 8';
           const polyline = L.polyline(coords.map(coord => [coord.lat, coord.lon]), {
             color,
-            weight: 7,
-            opacity: 0.95,
-            dashArray,
+            weight: 6,
+            opacity: 0.9,
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
@@ -1080,8 +1078,8 @@
           // Soft glow underline for stronger tube route presentation
           L.polyline(coords.map(coord => [coord.lat, coord.lon]), {
             color: color,
-            weight: 14,
-            opacity: 0.15,
+            weight: 12,
+            opacity: 0.2,
             lineCap: 'round',
             lineJoin: 'round'
           }).addTo(map);
@@ -1125,7 +1123,13 @@
           if (stationMarker) {
             stationMap.removeLayer(stationMarker);
           }
-          stationMarker = L.marker([lat, lon]).addTo(stationMap).bindPopup(`<strong>${label}</strong>`).openPopup();
+          stationMarker = L.circleMarker([lat, lon], {
+            radius: 8,
+            fillColor: '#ffffff',
+            color: '#333333',
+            weight: 3,
+            fillOpacity: 1.0
+          }).addTo(stationMap).bindPopup(`<strong>${label}</strong>`).openPopup();
 
           for (const line of lines.slice(0, 3)) {
             const color = colorHexMap[lineColors[line] || 'central'];
@@ -1159,9 +1163,9 @@
             const coords = await getStopPointCoords(stationName);
             if (coords) {
               const marker = L.circleMarker([coords.lat, coords.lon], {
-                radius: 7,
-                fillColor: '#ff5722',
-                color: '#ffffff',
+                radius: 6,
+                fillColor: '#ffffff',
+                color: '#333333',
                 weight: 2,
                 fillOpacity: 0.9
               }).addTo(trackingMap);
