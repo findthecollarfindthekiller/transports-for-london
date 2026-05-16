@@ -23,51 +23,74 @@ const TFL_OPTIONS = {
   }
 };
 
-// Rate limiting
+// Strict rate limiting with global request queue
 let lastApiCall = 0;
-const API_RATE_LIMIT = 1000; // 1 second between calls
+const API_RATE_LIMIT = 3000; // 3 seconds between ALL requests
+let requestQueue = [];
+let isProcessingQueue = false;
 
-// Helper function to make HTTPS requests to TfL API with rate limiting
-function makeApiRequest(path) {
+function queueApiRequest(path) {
   return new Promise((resolve, reject) => {
+    requestQueue.push({ path, resolve, reject, timestamp: Date.now() });
+    processQueue();
+  });
+}
+
+async function processQueue() {
+  if (isProcessingQueue || requestQueue.length === 0) return;
+  
+  isProcessingQueue = true;
+  
+  while (requestQueue.length > 0) {
+    const { path, resolve, reject } = requestQueue.shift();
     const now = Date.now();
     const timeSinceLastCall = now - lastApiCall;
     
     if (timeSinceLastCall < API_RATE_LIMIT) {
-      // Wait for rate limit
-      setTimeout(() => makeApiRequest(path).then(resolve).catch(reject), API_RATE_LIMIT - timeSinceLastCall);
-      return;
+      await new Promise(r => setTimeout(r, API_RATE_LIMIT - timeSinceLastCall));
     }
     
-    lastApiCall = now;
-    
+    try {
+      const result = await executeApiRequest(path);
+      resolve(result);
+    } catch (error) {
+      reject(error);
+    }
+  }
+  
+  isProcessingQueue = false;
+}
+
+function makeApiRequest(path) {
+  return queueApiRequest(path);
+}
+
+function executeApiRequest(path) {
+  return new Promise((resolve, reject) => {
+    lastApiCall = Date.now();
     const url = `${TFL_API_BASE}${path}`;
-    console.log(`Making API request to: ${url}`);
+    
+    console.log(`[${new Date().toLocaleTimeString()}] API Request: ${path}`);
     
     https.get(url, TFL_OPTIONS, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
         try {
-          // Handle both JSON and text responses
           if (res.statusCode === 200) {
             const parsed = JSON.parse(data);
+            console.log(`[${new Date().toLocaleTimeString()}] ✓ Success: ${path} (${Array.isArray(parsed) ? parsed.length : 'object'} items)`);
             resolve(parsed);
-          } else if (res.statusCode === 429) {
-            console.log('Rate limited by TfL API, retrying in 5 seconds...');
-            setTimeout(() => makeApiRequest(path).then(resolve).catch(reject), 5000);
-            return;
           } else {
-            console.log(`TfL API returned status ${res.statusCode} for ${path}`);
+            console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (HTTP ${res.statusCode})`);
             reject(new Error(`API returned status ${res.statusCode}`));
           }
         } catch (e) {
-          console.log('Response parsing error:', e.message);
           reject(new Error('Invalid JSON response from TfL API'));
         }
       });
     }).on('error', (e) => {
-      console.error('TfL API request error:', e.message);
+      console.error(`[${new Date().toLocaleTimeString()}] ✗ Error: ${path}`, e.message);
       reject(e);
     });
   });
@@ -256,27 +279,38 @@ async function fetchLiveTfLTrains() {
   const lineIds = ['bakerloo', 'central', 'circle', 'district', 'hammersmith-city', 'jubilee', 'metropolitan', 'northern', 'piccadilly', 'victoria', 'waterloo-city'];
   
   try {
-    // Fetch arrivals for all lines
-    const arrivalPromises = lineIds.map(lineId => 
-      makeApiRequest(`/Line/${lineId}/Arrivals`)
-        .then(arrivals => arrivals || [])
-        .catch(error => {
-          console.log(`Error fetching arrivals for ${lineId}:`, error.message);
-          return [];
-        })
-    );
+    // Fetch arrivals for all lines sequentially to avoid rate limiting
+    const allArrivals = [];
+    let successCount = 0;
     
-    const allArrivals = await Promise.all(arrivalPromises);
-    const combinedArrivals = allArrivals.flat();
-    
-    if (combinedArrivals.length === 0) {
-      throw new Error('No arrivals data available from any line');
+    for (const lineId of lineIds) {
+      try {
+        const arrivals = await makeApiRequest(`/Line/${lineId}/Arrivals`);
+        if (Array.isArray(arrivals)) {
+          allArrivals.push(...arrivals);
+          successCount++;
+          console.log(`✓ Fetched ${arrivals.length} arrivals for ${lineId}`);
+        }
+      } catch (error) {
+        console.log(`✗ Error fetching arrivals for ${lineId}: ${error.message}`);
+      }
     }
     
-    return combinedArrivals
+    console.log(`Successfully fetched arrivals from ${successCount}/${lineIds.length} lines (${allArrivals.length} total arrivals)`);
+    
+    if (allArrivals.length === 0) {
+      console.log('No arrivals from TfL, using fallback data');
+      const fallback = require('./public/trains-tracking.json');
+      return fallback.trains;
+    }
+    
+    const trains = allArrivals
       .sort((a, b) => (a.timeToStation || 0) - (b.timeToStation || 0))
       .slice(0, 150)
       .map(mapArrivalToTrain);
+    
+    console.log(`Returning ${trains.length} trains from TfL API`);
+    return trains;
   } catch (error) {
     console.error('Error fetching live trains from TfL:', error.message);
     // Fallback to local data
