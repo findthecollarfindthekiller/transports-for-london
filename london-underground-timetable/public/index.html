@@ -149,6 +149,33 @@
             outline: 3px solid rgba(255, 255, 255, 0.8);
             outline-offset: 2px;
         }
+        .line-info {
+            background: white;
+            border-radius: 16px;
+            padding: 1.6rem 2rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .line-info-text {
+            color: #4b5563;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 0.25rem 0.65rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: white;
+        }
+        .status-healthy { background-color: #10b981; }
+        .status-minor { background-color: #f59e0b; }
+        .status-disrupted { background-color: #ef4444; }
+        .status-info { background-color: #64748b; }
         .bakerloo { background-color: #B36305; }
         .central { background-color: #E32017; }
         .circle { background-color: #FFD300; color: #333; }
@@ -837,6 +864,10 @@
         <!-- Lines Tab -->
         <div id="lines-tab" class="tab-content active">
             <div class="lines-grid" id="linesContainer"></div>
+            <div id="lineInfo" class="line-info">
+                <h3 style="margin-bottom: .75rem; color: #1a1a1a;">Line details</h3>
+                <div class="line-info-text">Click a line to see its name and zones covered.</div>
+            </div>
 
             <div class="main-content" id="mainContent">
                 <div class="stations-container scrollbar">
@@ -1200,13 +1231,70 @@
             activeLineIndex = index;
             const data = timetables[line];
             
+            const status = await renderLineStatus(line);
+            renderLineInfo(line, status);
             renderStations(data.stations, line);
             renderSchedules(data.schedules, line);
-            await renderLineStatus(line);
             
             document.querySelectorAll('.line-btn').forEach((btn, idx) => {
                 btn.classList.toggle('active', idx === index);
             });
+        }
+
+        function getLineZones(lineName) {
+            const zones = new Set();
+            const stations = timetables[lineName]?.stations || [];
+            stations.forEach(stationName => {
+                const stationInfo = stationsData.stations[stationName];
+                if (stationInfo && stationInfo.zone != null) {
+                    zones.add(stationInfo.zone);
+                } else {
+                    zones.add(1);
+                }
+            });
+            return Array.from(zones).sort((a, b) => a - b);
+        }
+
+        function formatZones(zones) {
+            if (!zones.length) return 'Zone data unavailable';
+            if (zones.length === 1) return `Zone ${zones[0]}`;
+            const first = zones[0];
+            const last = zones[zones.length - 1];
+            const consecutive = zones.every((zone, idx) => zone === first + idx);
+            if (consecutive) {
+                return `Zones ${first}–${last}`;
+            }
+            return `Zones ${zones.join(', ')}`;
+        }
+
+        function renderLineInfo(lineName, status = null) {
+            const lineInfo = document.getElementById('lineInfo');
+            const zones = getLineZones(lineName);
+            const zoneText = formatZones(zones);
+            const description = timetables[lineName]?.description || '';
+            const statusText = status ? status.reason || status.status || 'Status unavailable' : 'Loading current service status…';
+            const statusLabel = status ? (status.status || 'Unknown') : 'Loading...';
+            const statusClass = status ? getServiceStatusClass(status.status) : 'status-info';
+
+            lineInfo.innerHTML = `
+                <h3 style="margin-bottom: .75rem; color: #1a1a1a;">${lineName} Line</h3>
+                <div class="line-info-text">
+                    <strong>Line name:</strong> ${lineName}<br>
+                    <strong>Zones covered:</strong> ${zoneText}<br>
+                    <strong>Service status:</strong> <span class="status-badge ${statusClass}">${statusLabel}</span><br>
+                    ${statusText ? `<span style="display:block; margin-top: .5rem; color: #4b5563;">${statusText}</span>` : ''}
+                    ${description ? `<br><em>${description}</em>` : ''}
+                </div>
+            `;
+        }
+
+        function getServiceStatusClass(status) {
+            if (!status) return 'status-minor';
+            const normalized = status.toLowerCase();
+            if (normalized.includes('good service')) return 'status-healthy';
+            if (normalized.includes('minor') || normalized.includes('reduced') || normalized.includes('planned') || normalized.includes('part suspension')) return 'status-minor';
+            if (normalized.includes('severe') || normalized.includes('major') || normalized.includes('suspended') || normalized.includes('disrupted') || normalized.includes('closure')) return 'status-disrupted';
+            return 'status-minor';
         }
 
         function renderStations(stations, lineName) {
@@ -1388,10 +1476,12 @@
                 setStatusBannerStyle(statusClass);
                 const message = status.reason || status.status || 'Status unavailable';
                 setStatusBannerText(`${line} line status`, message);
+                return status;
             } catch (error) {
                 setStatusBannerStyle('disrupted');
                 setStatusBannerText(`${line} line status`, 'Unable to fetch line status right now.');
                 console.error('Line status error:', error);
+                return null;
             }
         }
 
