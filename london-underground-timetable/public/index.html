@@ -1706,6 +1706,9 @@
             html += '</div>';
             document.getElementById('stationInfoContainer').innerHTML = html;
 
+            // Reset stationMap to allow re-initialization for new station
+            stationMap = null;
+
             setTimeout(async () => {
                 initializeMaps();
                 const coords = await getStopPointCoords(stationName);
