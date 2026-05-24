@@ -590,19 +590,53 @@
             transition: all 0.3s ease;
             border: 1px solid #f0f0f0;
             border-left-width: 6px;
+            cursor: pointer;
         }
         .train-card:hover {
             transform: translateY(-6px);
             box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
         }
-        .train-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 1.2rem;
-            border-bottom: 2px solid;
-            padding-bottom: 1rem;
+        .train-card.selected {
+            border-left-width: 8px;
+            transform: translateY(-4px);
+            box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+            outline: 2px solid rgba(102, 126, 234, 0.25);
         }
+        .selected-train-info {
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #1e3a8a;
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            font-weight: 600;
+            display: none;
+        }
+        .selected-train-info.visible {
+            display: block;
+        }
+        .tracking-map {
+            width: 100%;
+            min-height: 320px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 1.5rem;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        }
+        .tracking-map-container {
+            margin-bottom: 1.5rem;
+        }
+        .pulse {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            background: #2e7d32;
+            border-radius: 50%;
+            margin-right: 0.8rem;
+            animation: pulse 2s infinite;
+        }
+
         .train-line-badge {
             font-weight: 700;
             font-size: 1.1rem;
@@ -906,6 +940,7 @@
                 <div class="tracking-status" id="trackingStatus">
                     <span class="pulse"></span>Connecting to live tracking...
                 </div>
+                <div id="selectedTrainInfo" class="selected-train-info"></div>
                 <div class="tracking-map-container">
                     <div id="trackingMap" class="tracking-map"></div>
                 </div>
@@ -990,19 +1025,26 @@
             document.getElementById('currentTime').textContent = londonTime;
         }
 
+        function fetchWithTimeout(url, timeout = 5000) {
+            return Promise.race([
+                fetch(url),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Fetch timeout for ' + url)), timeout))
+            ]);
+        }
+
         async function loadData() {
             try {
                 // Try to load local data first, then augment with TfL data
                 const [timetablesRes, stationsRes] = await Promise.all([
-                    fetch('/timetables.json'),
-                    fetch('/stations-data.json')
+                    fetchWithTimeout('timetables.json'),
+                    fetchWithTimeout('stations-data.json')
                 ]);
                 timetables = await timetablesRes.json();
                 stationsData = await stationsRes.json();
                 
                 // Try to fetch real TfL lines data
                 try {
-                  const linesRes = await fetch('/api/lines');
+                  const linesRes = await fetch('api/lines');
                   if (linesRes.ok) {
                     const tflLines = await linesRes.json();
                     console.log('Loaded TfL line data:', tflLines);
@@ -1033,6 +1075,10 @@
                 
                 renderLines();
                 setupStationSearch();
+                const firstLine = Object.keys(timetables)[0];
+                if (firstLine) {
+                    selectLine(firstLine, 0);
+                }
             } catch (error) {
                 console.error('Error loading data:', error);
             }
@@ -1041,7 +1087,7 @@
         // Fetch real arrivals from TfL API
         async function fetchRealArrivals(stopPointId) {
           try {
-            const res = await fetch(`/api/stoppoint/${stopPointId}/arrivals`);
+            const res = await fetch(`api/stoppoint/${stopPointId}/arrivals`);
             if (res.ok) {
               return await res.json();
             }
@@ -1054,7 +1100,7 @@
         // Search station using TfL API
         async function searchStationWithTfL(query) {
           try {
-            const res = await fetch(`/api/stoppoint/search?query=${encodeURIComponent(query)}`);
+            const res = await fetch(`api/stoppoint/search?query=${encodeURIComponent(query)}`);
             if (res.ok) {
               const results = await res.json();
               return results.matches || results;
@@ -1094,28 +1140,30 @@
           return coords;
         }
 
-        async function drawLineRouteOnMap(lineName, map, color) {
+        async function drawLineRouteOnMap(lineName, map, color, options = {}) {
           if (!map || !timetables[lineName]) return null;
           const coords = await getLineRouteCoords(lineName);
           if (!coords || coords.length < 2) return null;
-          const polyline = L.polyline(coords.map(coord => [coord.lat, coord.lon]), {
+
+          const base = {
             color,
-            weight: 6,
-            opacity: 0.9,
+            weight: options.weight || 6,
+            opacity: options.opacity != null ? options.opacity : 0.9,
             lineCap: 'round',
             lineJoin: 'round'
-          }).addTo(map);
+          };
+          const polyline = L.polyline(coords.map(coord => [coord.lat, coord.lon]), base).addTo(map);
 
-          // Soft glow underline for stronger tube route presentation
-          L.polyline(coords.map(coord => [coord.lat, coord.lon]), {
-            color: color,
-            weight: 12,
-            opacity: 0.2,
+          const glowLine = L.polyline(coords.map(coord => [coord.lat, coord.lon]), {
+            color,
+            weight: options.glowWeight || Math.max(10, base.weight * 2),
+            opacity: options.glowOpacity != null ? options.glowOpacity : 0.16,
             lineCap: 'round',
-            lineJoin: 'round'
+            lineJoin: 'round',
+            dashArray: options.dashArray || null
           }).addTo(map);
 
-          return polyline;
+          return [polyline, glowLine];
         }
 
         function clearLayerGroup(layers) {
@@ -1164,9 +1212,9 @@
 
           for (const line of lines.slice(0, 3)) {
             const color = colorHexMap[lineColors[line] || 'central'];
-            const route = await drawLineRouteOnMap(line, stationMap, color);
-            if (route) {
-              stationRouteLayers.push(route);
+            const routes = await drawLineRouteOnMap(line, stationMap, color);
+            if (routes) {
+              routes.forEach(route => stationRouteLayers.push(route));
             }
           }
           stationMap.invalidateSize();
@@ -1177,32 +1225,58 @@
           trackingMarkers.forEach(marker => trackingMap.removeLayer(marker));
           trackingMarkers = [];
           clearLayerGroup(trackingRouteLayers);
+          if (selectedStationMarker) {
+            trackingMap.removeLayer(selectedStationMarker);
+            selectedStationMarker = null;
+          }
 
           const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))].slice(0, 5);
+          const bounds = [];
+
           for (const line of uniqueLines) {
             const color = colorHexMap[lineColors[line] || 'central'];
-            const route = await drawLineRouteOnMap(line, trackingMap, color);
-            if (route) {
-              trackingRouteLayers.push(route);
+            const routes = await drawLineRouteOnMap(line, trackingMap, color, {
+              weight: selectedTrain && selectedTrain.line === line ? 10 : 5,
+              opacity: selectedTrain && selectedTrain.line === line ? 0.95 : 0.75,
+              glowWeight: selectedTrain && selectedTrain.line === line ? 18 : 12,
+              glowOpacity: selectedTrain && selectedTrain.line === line ? 0.22 : 0.15,
+              dashArray: selectedTrain && selectedTrain.line === line ? null : '8, 8'
+            });
+            if (routes) {
+              routes.forEach(route => trackingRouteLayers.push(route));
             }
           }
 
-          const uniqueStations = [...new Set(currentTrains.map(train => train.nextStation).filter(Boolean))].slice(0, 15);
-          const bounds = [];
-
-          for (const stationName of uniqueStations) {
+          if (selectedTrain) {
+            const stationName = selectedTrain.nextStation;
             const coords = await getStopPointCoords(stationName);
             if (coords) {
-              const marker = L.circleMarker([coords.lat, coords.lon], {
-                radius: 6,
-                fillColor: '#ffffff',
-                color: '#333333',
-                weight: 2,
-                fillOpacity: 0.9
+              selectedStationMarker = L.circleMarker([coords.lat, coords.lon], {
+                radius: 10,
+                fillColor: '#fff',
+                color: colorHexMap[lineColors[selectedTrain.line] || 'central'],
+                weight: 4,
+                fillOpacity: 1
               }).addTo(trackingMap);
-              marker.bindPopup(`<strong>${stationName}</strong><br/>Next arrival at ${stationName}`);
-              trackingMarkers.push(marker);
+              selectedStationMarker.bindPopup(`<strong>${selectedTrain.line} train</strong><br/>Next: ${stationName}`).openPopup();
               bounds.push([coords.lat, coords.lon]);
+            }
+          } else {
+            const uniqueStations = [...new Set(currentTrains.map(train => train.nextStation).filter(Boolean))].slice(0, 15);
+            for (const stationName of uniqueStations) {
+              const coords = await getStopPointCoords(stationName);
+              if (coords) {
+                const marker = L.circleMarker([coords.lat, coords.lon], {
+                  radius: 6,
+                  fillColor: '#ffffff',
+                  color: '#333333',
+                  weight: 2,
+                  fillOpacity: 0.9
+                }).addTo(trackingMap);
+                marker.bindPopup(`<strong>${stationName}</strong><br/>Next arrival at ${stationName}`);
+                trackingMarkers.push(marker);
+                bounds.push([coords.lat, coords.lon]);
+              }
             }
           }
 
@@ -1428,7 +1502,7 @@
 
         async function fetchLineStatus(line) {
             const lineId = tflLineIds[line] || line.toLowerCase().replace(/\s+/g, '-');
-            const res = await fetch(`/api/line/${encodeURIComponent(lineId)}/status`);
+            const res = await fetch(`api/line/${encodeURIComponent(lineId)}/status`);
             if (!res.ok) throw new Error('Status fetch failed');
             const data = await res.json();
             
@@ -1790,6 +1864,9 @@
         // Live Tracking with WebSocket
         let socket = null;
         let currentTrains = [];
+        let selectedTrainId = null;
+        let selectedTrain = null;
+        let selectedStationMarker = null;
 
         function initializeWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -1860,9 +1937,10 @@
                     const color = colorHexMap[colorClass];
                     const passengerColor = getPassengerColor(train.passengers);
                     const progressColor = getProgressColor(train.progress);
+                    const isSelected = train.id === selectedTrainId;
                     
                     html += `
-                        <div class="train-card" style="border-left-color: ${color};">
+                        <div class="train-card${isSelected ? ' selected' : ''}" style="border-left-color: ${color};" onclick="selectTrain('${train.id}')">
                             <div class="train-header" style="border-bottom-color: ${color};">
                                 <div class="train-line-badge" style="background-color: ${color};">
                                     ${train.line}
@@ -1912,6 +1990,15 @@
             });
 
             container.innerHTML = html || '<div class="no-trains">No trains available</div>';
+            const selectedInfo = document.getElementById('selectedTrainInfo');
+            if (selectedTrain) {
+                selectedInfo.innerHTML = `Tracking ${selectedTrain.line} train to <strong>${selectedTrain.destination}</strong> — arriving at <strong>${selectedTrain.nextStation}</strong> in <strong>${Math.ceil(selectedTrain.timeToStation / 60)} min</strong>. Click another train to focus a different service.`;
+                selectedInfo.classList.add('visible');
+            } else {
+                selectedInfo.textContent = 'Click a train card to track that service on the map.';
+                selectedInfo.classList.add('visible');
+            }
+
             setTimeout(() => {
                 updateTrackingMap().catch(console.error);
             }, 100);
@@ -1934,20 +2021,22 @@
             return levels[level] || 'moderate';
         }
 
+        function selectTrain(trainId) {
+            selectedTrainId = trainId;
+            selectedTrain = currentTrains.find(train => train.id === trainId) || null;
+            renderLiveTrains();
+        }
+
         function getProgressColor(progress) {
             if (progress < 33) return '#00aa00';
             if (progress < 66) return '#ffce00';
             return '#dc241f';
         }
 
-        // Initialize WebSocket connection when page loads
-        window.addEventListener('load', () => {
-            // Load timetable data
+        function initializeApp() {
             loadData();
-            
             initializeMaps();
             setTimeout(() => {
-                // Load socket.io library dynamically
                 const script = document.createElement('script');
                 script.src = '/socket.io/socket.io.js';
                 script.onload = () => {
@@ -1955,7 +2044,13 @@
                 };
                 document.head.appendChild(script);
             }, 500);
-        });
+        }
+
+        if (document.readyState === 'complete' || document.readyState === 'interactive') {
+            initializeApp();
+        } else {
+            window.addEventListener('DOMContentLoaded', initializeApp);
+        }
 
     </script>
 </body>
