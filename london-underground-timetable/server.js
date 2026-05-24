@@ -113,6 +113,32 @@ const STOP_SEARCH_CACHE_DURATION = 300000; // 5 minutes for stop searches
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Line color mapping
+const lineColorMap = {
+  'Bakerloo': '#B36305',
+  'Central': '#E32017',
+  'Circle': '#FFD300',
+  'District': '#00782A',
+  'Hammersmith': '#F3A9BB',
+  'Jubilee': '#A0A5A9',
+  'Metropolitan': '#9B0056',
+  'Northern': '#000000',
+  'Piccadilly': '#003688',
+  'Victoria': '#0098D4',
+  'Waterloo': '#95CDBA'
+};
+
+function getLineColor(lineName) {
+  if (!lineName) return '#667eea';
+  const normalized = lineName.toLowerCase();
+  for (const [line, color] of Object.entries(lineColorMap)) {
+    if (normalized.includes(line.toLowerCase())) {
+      return color;
+    }
+  }
+  return '#667eea';
+}
+
 // Routes
 app.get('/api/stations', async (req, res) => {
   try {
@@ -132,14 +158,33 @@ app.get('/api/lines', async (req, res) => {
       console.log('Fetching lines from TfL API...');
       try {
         const lines = await makeApiRequest('/Line/Mode/tube');
-        cachedLines = lines;
+        // Enhance with local line data
+        const enhancedLines = lines.map(line => ({
+          ...line,
+          id: line.id || line.name?.toLowerCase().replace(/\s+/g, '-'),
+          displayName: tflLineNameMap[line.id?.toLowerCase()] || line.name,
+          color: getLineColor(line.name || line.id)
+        }));
+        cachedLines = enhancedLines;
         lastLinesUpdate = now;
-        console.log(`Successfully fetched ${lines.length} lines from TfL`);
+        console.log(`Successfully fetched ${enhancedLines.length} lines from TfL`);
       } catch (apiError) {
         console.log('TfL API unavailable, using local data');
         // Fallback to local data
-        const stations = require('./public/stations.json');
-        cachedLines = Object.keys(stations).map(line => ({ name: line, id: line.toLowerCase() }));
+        const localLines = [
+          { name: 'Bakerloo', id: 'bakerloo', color: '#B36305' },
+          { name: 'Central', id: 'central', color: '#E32017' },
+          { name: 'Circle', id: 'circle', color: '#FFD300' },
+          { name: 'District', id: 'district', color: '#00782A' },
+          { name: 'Hammersmith', id: 'hammersmith-city', color: '#F3A9BB' },
+          { name: 'Jubilee', id: 'jubilee', color: '#A0A5A9' },
+          { name: 'Metropolitan', id: 'metropolitan', color: '#9B0056' },
+          { name: 'Northern', id: 'northern', color: '#000000' },
+          { name: 'Piccadilly', id: 'piccadilly', color: '#003688' },
+          { name: 'Victoria', id: 'victoria', color: '#0098D4' },
+          { name: 'Waterloo', id: 'waterloo-city', color: '#95CDBA' }
+        ];
+        cachedLines = localLines;
       }
     }
     res.json(cachedLines);
@@ -197,6 +242,22 @@ app.get('/api/stoppoint/search', async (req, res) => {
     const queryString = `/StopPoint/Search?query=${encodeURIComponent(query)}&modes=tube`;
     const results = await makeApiRequest(queryString);
     
+    // Enhance results with local line information
+    if (results && results.matches) {
+      results.matches = results.matches.map(match => {
+        // Find which lines serve this station from local data
+        const stationData = require('./public/stations-data.json');
+        const localStationInfo = stationData.stations && stationData.stations[match.name];
+        
+        if (localStationInfo) {
+          match.lines = localStationInfo.lines || [];
+          match.zone = localStationInfo.zone || 1;
+        }
+        
+        return match;
+      });
+    }
+    
     // Cache the result
     cachedStopSearches[cacheKey] = results;
     lastStopSearchUpdate[cacheKey] = now;
@@ -230,7 +291,7 @@ app.get('/api/stoppoint/:stopId/arrivals', async (req, res) => {
   }
 });
 
-// TfL line name mapping
+// TfL line name mapping - comprehensive mapping for all tube lines
 const tflLineNameMap = {
   'waterloo-city': 'Waterloo',
   'hammersmith-city': 'Hammersmith',
@@ -242,7 +303,24 @@ const tflLineNameMap = {
   'bakerloo': 'Bakerloo',
   'circle': 'Circle',
   'northern': 'Northern',
-  'jubilee': 'Jubilee'
+  'jubilee': 'Jubilee',
+  'dlr': 'DLR',
+  'tflrail': 'TFL Rail'
+};
+
+// Reverse mapping for normalizing line names
+const lineNameToId = {
+  'Waterloo': 'waterloo-city',
+  'Hammersmith': 'hammersmith-city',
+  'Piccadilly': 'piccadilly',
+  'Victoria': 'victoria',
+  'Metropolitan': 'metropolitan',
+  'District': 'district',
+  'Central': 'central',
+  'Bakerloo': 'bakerloo',
+  'Circle': 'circle',
+  'Northern': 'northern',
+  'Jubilee': 'jubilee'
 };
 
 function normalizeCrowding(crowding) {
@@ -258,12 +336,24 @@ function mapArrivalToTrain(arrival) {
   const timeToStation = Number(arrival.timeToStation) || 0;
   const progress = Math.min(100, Math.max(0, 100 - Math.round((timeToStation / 120) * 100)));
   
-  // Map TfL lineId to our line names
-  const lineName = tflLineNameMap[arrival.lineId] || arrival.lineName || 'Unknown';
+  // Map TfL lineId to our line names - handle both ID and display name
+  let lineName = arrival.lineName || 'Unknown';
+  
+  // Try to map from lineId first
+  if (arrival.lineId) {
+    const normalized = arrival.lineId.toLowerCase();
+    lineName = tflLineNameMap[normalized] || arrival.lineName || 'Unknown';
+  }
+  
+  // Ensure lineName is properly capitalized
+  if (lineName && lineName !== 'Unknown') {
+    lineName = lineName.charAt(0).toUpperCase() + lineName.slice(1).toLowerCase();
+  }
   
   return {
     id: arrival.vehicleId || `${arrival.lineId}-${arrival.platformName || arrival.stationName || arrival.towards}-${arrival.destinationName}`.replace(/\s+/g, '_'),
     line: lineName,
+    lineId: arrival.lineId || 'unknown',
     destination: arrival.destinationName || arrival.towards || 'Unknown',
     nextStation: arrival.stationName || arrival.platformName || arrival.towards || 'Next stop',
     currentPosition: 1,
@@ -271,7 +361,9 @@ function mapArrivalToTrain(arrival) {
     status: timeToStation <= 30 ? 'Due' : 'Running',
     passengers: normalizeCrowding(arrival.crowding),
     timeToStation,
-    expectedArrival: arrival.expectedArrival
+    expectedArrival: arrival.expectedArrival,
+    stopPointId: arrival.stopPointId,
+    platformName: arrival.platformName || 'TBC'
   };
 }
 

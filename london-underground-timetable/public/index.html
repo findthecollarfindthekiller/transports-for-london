@@ -462,21 +462,21 @@
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
         }
-        .station-lines {
-            display: flex;
-            gap: 0.8rem;
-            flex-wrap: wrap;
-            margin-bottom: 1.5rem;
-        }
         .station-line-badge {
-            padding: 0.6rem 1.2rem;
+            padding: 0.8rem 1.4rem;
             border-radius: 8px;
             color: white;
             font-weight: 700;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.5px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .station-line-badge:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 0, 0.3);
         }
         .services-list {
             display: grid;
@@ -637,6 +637,14 @@
             animation: pulse 2s infinite;
         }
 
+        .train-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.2rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid;
+        }
         .train-line-badge {
             font-weight: 700;
             font-size: 1.1rem;
@@ -939,6 +947,10 @@
             <div class="live-tracking-container">
                 <div class="tracking-status" id="trackingStatus">
                     <span class="pulse"></span>Connecting to live tracking...
+                </div>
+                <div id="trackingLinesInfo" style="background: #f8f9fa; padding: 1.2rem; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid #e8e8e8; display: none;">
+                    <div style="font-size: 0.85rem; color: #666; text-transform: uppercase; font-weight: 700; margin-bottom: 0.6rem; letter-spacing: 0.5px;">Lines Shown on Map:</div>
+                    <div id="trackingLinesDisplay" style="display: flex; gap: 0.6rem; flex-wrap: wrap;"></div>
                 </div>
                 <div id="selectedTrainInfo" class="selected-train-info"></div>
                 <div class="tracking-map-container">
@@ -1305,10 +1317,15 @@
             activeLineIndex = index;
             const data = timetables[line];
             
-            const status = await renderLineStatus(line);
-            renderLineInfo(line, status);
+            // Render line info and schedules immediately
+            renderLineInfo(line, null);
             renderStations(data.stations, line);
             renderSchedules(data.schedules, line);
+            
+            // Fetch and update status asynchronously (non-blocking)
+            renderLineStatus(line).catch(error => {
+                console.error('Error fetching line status:', error);
+            });
             
             document.querySelectorAll('.line-btn').forEach((btn, idx) => {
                 btn.classList.toggle('active', idx === index);
@@ -1624,11 +1641,25 @@
                 }
 
                 suggestionsList.innerHTML = matches
-                    .map(station => `
-                        <div class="suggestion-item" onclick="selectStationFromSearch('${station}')">
-                            ${station}
-                        </div>
-                    `)
+                    .map(station => {
+                        const stationInfo = stationsData.stations && stationsData.stations[station];
+                        const lines = stationInfo ? stationInfo.lines : [];
+                        const linesBadges = lines.length > 0 
+                            ? lines.map(line => {
+                                const colorClass = lineColors[line] || 'central';
+                                const color = colorHexMap[colorClass];
+                                return `<span style="display: inline-block; background-color: ${color}; color: white; padding: 0.2rem 0.6rem; border-radius: 3px; font-size: 0.75rem; margin-left: 0.3rem; font-weight: 600;">${line}</span>`;
+                              }).join('')
+                            : '';
+                        return `
+                            <div class="suggestion-item" onclick="selectStationFromSearch('${station}')">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <span>${station}</span>
+                                    <div style="display: flex; gap: 0.3rem; flex-wrap: wrap; justify-content: flex-end;">${linesBadges}</div>
+                                </div>
+                            </div>
+                        `
+                    })
                     .join('');
                 suggestionsList.classList.add('active');
             });
@@ -1917,7 +1948,25 @@
             
             if (!currentTrains || currentTrains.length === 0) {
                 container.innerHTML = '<div class="no-trains">No trains currently tracking</div>';
+                document.getElementById('trackingLinesInfo').style.display = 'none';
                 return;
+            }
+
+            // Get unique lines
+            const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))].sort();
+            
+            // Display which lines are shown on the map
+            const trackingLinesDisplay = document.getElementById('trackingLinesDisplay');
+            trackingLinesDisplay.innerHTML = uniqueLines
+                .map(line => {
+                    const colorClass = lineColors[line] || 'central';
+                    const color = colorHexMap[colorClass];
+                    return `<div style="background-color: ${color}; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.3px;">${line}</div>`;
+                })
+                .join('');
+            
+            if (uniqueLines.length > 0) {
+                document.getElementById('trackingLinesInfo').style.display = 'block';
             }
 
             // Sort trains by line
@@ -1951,8 +2000,10 @@
                             </div>
                             <div class="train-info">
                                 <div class="train-info-item">
-                                    <span class="train-info-label">Train ID:</span>
-                                    <span class="train-info-value">${train.id}</span>
+                                    <span class="train-info-label">Line:</span>
+                                    <span class="train-info-value" style="background-color: ${color}; color: white; padding: 0.3rem 0.6rem; border-radius: 4px; width: fit-content;">
+                                        ${train.line}
+                                    </span>
                                 </div>
                                 <div class="train-info-item">
                                     <span class="train-info-label">Destination:</span>
