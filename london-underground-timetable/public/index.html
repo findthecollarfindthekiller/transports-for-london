@@ -921,7 +921,7 @@
                 <div class="schedules-container scrollbar">
                     <h3 id="scheduleTitle">Timetable</h3>
                     <div id="schedulesDisplay" class="no-line-selected">
-                        Select a line to view the timetable
+                        Select a line to view its timetable
                     </div>
                 </div>
             </div>
@@ -938,7 +938,7 @@
             </div>
             
             <div id="stationInfoContainer">
-                <div class="no-line-selected">Search for a station to view current timetables</div>
+                <div class="no-line-selected">Search for a station to view timetables</div>
             </div>
         </div>
 
@@ -996,6 +996,9 @@
         let stationsData = {};
         let activeLineIndex = -1;
         let activeLine = null;
+        let lineStatusCache = {}; // Cache for line statuses
+        let lastStatusCacheUpdate = 0;
+        const STATUS_CACHE_DURATION = 60000; // 1 minute
         const tflLineIds = {
             'Waterloo': 'waterloo-city',
             'Hammersmith': 'hammersmith-city',
@@ -1065,6 +1068,11 @@
                   console.log('Using local line data');
                 }
                 
+                // Pre-fetch all line statuses for faster display
+                preloadLineStatuses().catch(error => 
+                  console.warn('Could not pre-load line statuses:', error.message)
+                );
+                
                 // Create a sorted list of all stations from both sources
                 const stationSet = new Set();
                 
@@ -1094,6 +1102,23 @@
             } catch (error) {
                 console.error('Error loading data:', error);
             }
+        }
+
+        // Pre-load all line statuses in batch for faster UI display
+        async function preloadLineStatuses() {
+          try {
+            console.log('Pre-loading line statuses...');
+            const res = await fetch('api/lines/all-statuses');
+            if (res.ok) {
+              lineStatusCache = await res.json();
+              lastStatusCacheUpdate = Date.now();
+              console.log('Pre-loaded', Object.keys(lineStatusCache).length, 'line statuses');
+            } else {
+              console.warn('Batch status endpoint returned', res.status);
+            }
+          } catch (error) {
+            console.warn('Failed to pre-load line statuses:', error.message);
+          }
         }
 
         // Fetch real arrivals from TfL API
@@ -1322,10 +1347,17 @@
             renderStations(data.stations, line);
             renderSchedules(data.schedules, line);
             
-            // Fetch and update status asynchronously (non-blocking)
-            renderLineStatus(line).catch(error => {
+            // Fetch and update status asynchronously, then re-render line info with status
+            renderLineStatus(line)
+              .then(status => {
+                if (status && activeLine === line) {
+                  // Update line info display with actual status
+                  renderLineInfo(line, status);
+                }
+              })
+              .catch(error => {
                 console.error('Error fetching line status:', error);
-            });
+              });
             
             document.querySelectorAll('.line-btn').forEach((btn, idx) => {
                 btn.classList.toggle('active', idx === index);
@@ -1519,6 +1551,26 @@
 
         async function fetchLineStatus(line) {
             const lineId = tflLineIds[line] || line.toLowerCase().replace(/\s+/g, '-');
+            
+            // Check if status is in cache and still fresh
+            const now = Date.now();
+            if (lineStatusCache[lineId] && (now - lastStatusCacheUpdate) < STATUS_CACHE_DURATION) {
+              console.log(`Using cached status for ${line}`);
+              const statusInfo = Array.isArray(lineStatusCache[lineId]) 
+                ? lineStatusCache[lineId][0] 
+                : lineStatusCache[lineId];
+              
+              if (statusInfo && statusInfo.lineStatuses) {
+                return {
+                  line,
+                  status: statusInfo.lineStatuses[0]?.statusSeverityDescription || 'Unknown',
+                  reason: statusInfo.lineStatuses[0]?.reason || ''
+                };
+              }
+            }
+            
+            // Fall back to individual API call if cache is stale or empty
+            console.log(`Fetching fresh status for ${line} (cache miss or stale)`);
             const res = await fetch(`api/line/${encodeURIComponent(lineId)}/status`);
             if (!res.ok) throw new Error('Status fetch failed');
             const data = await res.json();
@@ -1548,8 +1600,15 @@
         async function renderLineStatus(line) {
             setStatusBannerText(`${line} line status`, 'Fetching live TfL status…');
             setStatusBannerStyle('healthy');
+            
+            // Add timeout to prevent waiting forever for status (10 seconds is reasonable for TfL API)
+            const statusPromise = fetchLineStatus(line);
+            const timeoutPromise = new Promise((_, reject) => 
+              setTimeout(() => reject(new Error('Status fetch timeout')), 10000)
+            );
+            
             try {
-                const status = await fetchLineStatus(line);
+                const status = await Promise.race([statusPromise, timeoutPromise]);
                 const normalized = status.status.toLowerCase();
                 
                 // Classify status based on TfL severity descriptions
@@ -1567,12 +1626,13 @@
                 setStatusBannerStyle(statusClass);
                 const message = status.reason || status.status || 'Status unavailable';
                 setStatusBannerText(`${line} line status`, message);
-                return status;
+                return status; // Return the status for line info update
             } catch (error) {
-                setStatusBannerStyle('disrupted');
-                setStatusBannerText(`${line} line status`, 'Unable to fetch line status right now.');
-                console.error('Line status error:', error);
-                return null;
+                setStatusBannerStyle('minor');
+                setStatusBannerText(`${line} line status`, 'Service status temporarily unavailable.');
+                console.warn('Line status fetch issue:', error.message);
+                // Return a default status so the line info display updates
+                return { status: 'Service Status Loading', reason: 'Check the status banner above for real-time updates' }; 
             }
         }
 

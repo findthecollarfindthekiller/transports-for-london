@@ -25,7 +25,7 @@ const TFL_OPTIONS = {
 
 // Strict rate limiting with global request queue
 let lastApiCall = 0;
-const API_RATE_LIMIT = 3000; // 3 seconds between ALL requests
+const API_RATE_LIMIT = 500; // 0.5 seconds - more efficient (TfL limits are per-second, we can go faster)
 let requestQueue = [];
 let isProcessingQueue = false;
 
@@ -221,6 +221,74 @@ app.get('/api/line/:lineId/status', async (req, res) => {
     }
     
     res.status(500).json({ error: 'Failed to fetch line status', message: error.message });
+  }
+});
+
+// Batch endpoint - fetch all line statuses efficiently
+app.get('/api/lines/all-statuses', async (req, res) => {
+  try {
+    const now = Date.now();
+    
+    // Check if all statuses are cached and fresh
+    const allCached = Object.keys(cachedLineStatuses).length > 0 &&
+      Object.keys(cachedLineStatuses).every(lineId => 
+        (now - (lastLineStatusUpdate[lineId] || 0)) < LINE_STATUS_CACHE_DURATION
+      );
+    
+    if (allCached && Object.keys(cachedLineStatuses).length >= 11) {
+      return res.json(cachedLineStatuses);
+    }
+    
+    // Fetch all lines first if needed
+    let lines = cachedLines;
+    if (!lines || (now - lastLinesUpdate) > CACHE_DURATION) {
+      try {
+        lines = await makeApiRequest('/Line/Mode/tube');
+        cachedLines = lines;
+        lastLinesUpdate = now;
+      } catch (error) {
+        console.log('Using local line data for batch status');
+        lines = [
+          { id: 'bakerloo', name: 'Bakerloo' },
+          { id: 'central', name: 'Central' },
+          { id: 'circle', name: 'Circle' },
+          { id: 'district', name: 'District' },
+          { id: 'hammersmith-city', name: 'Hammersmith' },
+          { id: 'jubilee', name: 'Jubilee' },
+          { id: 'metropolitan', name: 'Metropolitan' },
+          { id: 'northern', name: 'Northern' },
+          { id: 'piccadilly', name: 'Piccadilly' },
+          { id: 'victoria', name: 'Victoria' },
+          { id: 'waterloo-city', name: 'Waterloo' }
+        ];
+      }
+    }
+    
+    // Fetch statuses for all lines in parallel (not queued)
+    const statusPromises = lines.map(line => 
+      makeApiRequest(`/Line/${line.id}/Status`)
+        .then(status => {
+          cachedLineStatuses[line.id] = status;
+          lastLineStatusUpdate[line.id] = now;
+          return status;
+        })
+        .catch(err => {
+          console.warn(`Failed to fetch status for ${line.id}:`, err.message);
+          return cachedLineStatuses[line.id] || null;
+        })
+    );
+    
+    await Promise.all(statusPromises);
+    res.json(cachedLineStatuses);
+  } catch (error) {
+    console.error('Error fetching all line statuses:', error.message);
+    
+    // Return whatever cached data we have
+    if (Object.keys(cachedLineStatuses).length > 0) {
+      return res.json(cachedLineStatuses);
+    }
+    
+    res.status(500).json({ error: 'Failed to fetch line statuses' });
   }
 });
 
