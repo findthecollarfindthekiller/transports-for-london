@@ -25,15 +25,41 @@ const TFL_OPTIONS = {
 
 // Strict rate limiting with global request queue
 let lastApiCall = 0;
-const API_RATE_LIMIT = 500; // 0.5 seconds - more efficient (TfL limits are per-second, we can go faster)
+const API_RATE_LIMIT = 1000; // 1 second to avoid TfL public API rate limit issues
+const MAX_API_RETRY = 2;
+const API_RETRY_DELAY = 1000;
+const API_REQUEST_TIMEOUT = 10000;
 let requestQueue = [];
 let isProcessingQueue = false;
+const inFlightRequests = new Map();
 
-function queueApiRequest(path) {
-  return new Promise((resolve, reject) => {
-    requestQueue.push({ path, resolve, reject, timestamp: Date.now() });
+function queueApiRequest(path, options = {}) {
+  if (inFlightRequests.has(path)) {
+    return inFlightRequests.get(path);
+  }
+
+  const requestPromise = new Promise((resolve, reject) => {
+    const request = {
+      path,
+      resolve,
+      reject,
+      timestamp: Date.now(),
+      priority: !!options.priority
+    };
+
+    if (request.priority) {
+      requestQueue.unshift(request);
+    } else {
+      requestQueue.push(request);
+    }
+
     processQueue();
   });
+
+  inFlightRequests.set(path, requestPromise);
+  requestPromise.finally(() => inFlightRequests.delete(path));
+
+  return requestPromise;
 }
 
 async function processQueue() {
@@ -61,37 +87,63 @@ async function processQueue() {
   isProcessingQueue = false;
 }
 
-function makeApiRequest(path) {
-  return queueApiRequest(path);
+function makeApiRequest(path, options = {}) {
+  return queueApiRequest(path, options);
 }
 
-function executeApiRequest(path) {
+function executeApiRequest(path, attempt = 0) {
   return new Promise((resolve, reject) => {
     lastApiCall = Date.now();
     const url = `${TFL_API_BASE}${path}`;
     
     console.log(`[${new Date().toLocaleTimeString()}] API Request: ${path}`);
     
-    https.get(url, TFL_OPTIONS, (res) => {
+    const req = https.get(url, TFL_OPTIONS, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
+
       res.on('end', () => {
-        try {
-          if (res.statusCode === 200) {
+        if (res.statusCode === 200) {
+          try {
             const parsed = JSON.parse(data);
             console.log(`[${new Date().toLocaleTimeString()}] ✓ Success: ${path} (${Array.isArray(parsed) ? parsed.length : 'object'} items)`);
             resolve(parsed);
-          } else {
-            console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (HTTP ${res.statusCode})`);
-            reject(new Error(`API returned status ${res.statusCode}`));
+          } catch (parseError) {
+            if (attempt < MAX_API_RETRY) {
+              const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
+              console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Parse failed for ${path}, retrying after ${retryDelay}ms`);
+              return setTimeout(() => executeApiRequest(path, attempt + 1).then(resolve).catch(reject), retryDelay);
+            }
+            reject(new Error('Invalid JSON response from TfL API'));
           }
-        } catch (e) {
-          reject(new Error('Invalid JSON response from TfL API'));
+        } else if (res.statusCode === 429 || res.statusCode >= 500) {
+          const message = `API returned status ${res.statusCode}`;
+          console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (${message})`);
+          if (attempt < MAX_API_RETRY) {
+            const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
+            console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Retrying ${path} after ${retryDelay}ms`);
+            return setTimeout(() => executeApiRequest(path, attempt + 1).then(resolve).catch(reject), retryDelay);
+          }
+          reject(new Error(message));
+        } else {
+          console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (HTTP ${res.statusCode})`);
+          reject(new Error(`API returned status ${res.statusCode}`));
         }
       });
-    }).on('error', (e) => {
+    });
+
+    req.on('error', (e) => {
+      if (attempt < MAX_API_RETRY) {
+        const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
+        console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Request error for ${path}: ${e.message}. Retrying after ${retryDelay}ms`);
+        return setTimeout(() => executeApiRequest(path, attempt + 1).then(resolve).catch(reject), retryDelay);
+      }
       console.error(`[${new Date().toLocaleTimeString()}] ✗ Error: ${path}`, e.message);
       reject(e);
+    });
+
+    req.setTimeout(API_REQUEST_TIMEOUT, () => {
+      req.destroy(new Error('Request timed out'));
     });
   });
 }
@@ -139,6 +191,38 @@ function getLineColor(lineName) {
   return '#667eea';
 }
 
+// TfL line name mapping - comprehensive mapping for all tube lines
+const tflLineNameMap = {
+  'waterloo-city': 'Waterloo',
+  'hammersmith-city': 'Hammersmith',
+  'piccadilly': 'Piccadilly',
+  'victoria': 'Victoria',
+  'metropolitan': 'Metropolitan',
+  'district': 'District',
+  'central': 'Central',
+  'bakerloo': 'Bakerloo',
+  'circle': 'Circle',
+  'northern': 'Northern',
+  'jubilee': 'Jubilee',
+  'dlr': 'DLR',
+  'tflrail': 'TFL Rail'
+};
+
+// Reverse mapping for normalizing line names
+const lineNameToId = {
+  'Waterloo': 'waterloo-city',
+  'Hammersmith': 'hammersmith-city',
+  'Piccadilly': 'piccadilly',
+  'Victoria': 'victoria',
+  'Metropolitan': 'metropolitan',
+  'District': 'district',
+  'Central': 'central',
+  'Bakerloo': 'bakerloo',
+  'Circle': 'circle',
+  'Northern': 'northern',
+  'Jubilee': 'jubilee'
+};
+
 // Routes
 app.get('/api/stations', async (req, res) => {
   try {
@@ -172,17 +256,17 @@ app.get('/api/lines', async (req, res) => {
         console.log('TfL API unavailable, using local data');
         // Fallback to local data
         const localLines = [
-          { name: 'Bakerloo', id: 'bakerloo', color: '#B36305' },
-          { name: 'Central', id: 'central', color: '#E32017' },
-          { name: 'Circle', id: 'circle', color: '#FFD300' },
-          { name: 'District', id: 'district', color: '#00782A' },
-          { name: 'Hammersmith', id: 'hammersmith-city', color: '#F3A9BB' },
-          { name: 'Jubilee', id: 'jubilee', color: '#A0A5A9' },
-          { name: 'Metropolitan', id: 'metropolitan', color: '#9B0056' },
-          { name: 'Northern', id: 'northern', color: '#000000' },
-          { name: 'Piccadilly', id: 'piccadilly', color: '#003688' },
-          { name: 'Victoria', id: 'victoria', color: '#0098D4' },
-          { name: 'Waterloo', id: 'waterloo-city', color: '#95CDBA' }
+          { name: 'Bakerloo', id: 'bakerloo', displayName: 'Bakerloo', color: '#B36305' },
+          { name: 'Central', id: 'central', displayName: 'Central', color: '#E32017' },
+          { name: 'Circle', id: 'circle', displayName: 'Circle', color: '#FFD300' },
+          { name: 'District', id: 'district', displayName: 'District', color: '#00782A' },
+          { name: 'Hammersmith', id: 'hammersmith-city', displayName: 'Hammersmith', color: '#F3A9BB' },
+          { name: 'Jubilee', id: 'jubilee', displayName: 'Jubilee', color: '#A0A5A9' },
+          { name: 'Metropolitan', id: 'metropolitan', displayName: 'Metropolitan', color: '#9B0056' },
+          { name: 'Northern', id: 'northern', displayName: 'Northern', color: '#000000' },
+          { name: 'Piccadilly', id: 'piccadilly', displayName: 'Piccadilly', color: '#003688' },
+          { name: 'Victoria', id: 'victoria', displayName: 'Victoria', color: '#0098D4' },
+          { name: 'Waterloo', id: 'waterloo-city', displayName: 'Waterloo', color: '#95CDBA' }
         ];
         cachedLines = localLines;
       }
@@ -204,7 +288,7 @@ app.get('/api/line/:lineId/status', async (req, res) => {
       return res.json(cachedLineStatuses[lineId]);
     }
     
-    const status = await makeApiRequest(`/Line/${lineId}/Status`);
+    const status = await makeApiRequest(`/Line/${lineId}/Status`, { priority: true });
     
     // Cache the result
     cachedLineStatuses[lineId] = status;
@@ -214,13 +298,13 @@ app.get('/api/line/:lineId/status', async (req, res) => {
   } catch (error) {
     console.error('Error fetching line status:', error.message);
     
-    // Return cached data if available, even if expired
-    if (cachedLineStatuses[req.params.lineId]) {
+    if (cachedLineStatuses[lineId]) {
       console.log('Returning cached line status due to API error');
-      return res.json(cachedLineStatuses[req.params.lineId]);
+      return res.json(cachedLineStatuses[lineId]);
     }
-    
-    res.status(500).json({ error: 'Failed to fetch line status', message: error.message });
+
+    console.warn(`Returning empty status for ${lineId} due to API error`);
+    return res.json([]);
   }
 });
 
@@ -359,38 +443,6 @@ app.get('/api/stoppoint/:stopId/arrivals', async (req, res) => {
   }
 });
 
-// TfL line name mapping - comprehensive mapping for all tube lines
-const tflLineNameMap = {
-  'waterloo-city': 'Waterloo',
-  'hammersmith-city': 'Hammersmith',
-  'piccadilly': 'Piccadilly',
-  'victoria': 'Victoria',
-  'metropolitan': 'Metropolitan',
-  'district': 'District',
-  'central': 'Central',
-  'bakerloo': 'Bakerloo',
-  'circle': 'Circle',
-  'northern': 'Northern',
-  'jubilee': 'Jubilee',
-  'dlr': 'DLR',
-  'tflrail': 'TFL Rail'
-};
-
-// Reverse mapping for normalizing line names
-const lineNameToId = {
-  'Waterloo': 'waterloo-city',
-  'Hammersmith': 'hammersmith-city',
-  'Piccadilly': 'piccadilly',
-  'Victoria': 'victoria',
-  'Metropolitan': 'metropolitan',
-  'District': 'district',
-  'Central': 'central',
-  'Bakerloo': 'bakerloo',
-  'Circle': 'circle',
-  'Northern': 'northern',
-  'Jubilee': 'jubilee'
-};
-
 function normalizeCrowding(crowding) {
   if (!crowding || typeof crowding !== 'object') {
     return 'Moderate';
@@ -445,7 +497,7 @@ async function fetchLiveTfLTrains() {
     
     for (const lineId of lineIds) {
       try {
-        const arrivals = await makeApiRequest(`/Line/${lineId}/Arrivals`);
+        const arrivals = await makeApiRequest(`/Line/${lineId}/Arrivals`, { priority: true });
         if (Array.isArray(arrivals)) {
           allArrivals.push(...arrivals);
           successCount++;

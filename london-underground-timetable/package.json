@@ -2,7 +2,7 @@
   "name": "london-underground-timetable",
   "version": "1.0.0",
   "description": "A timetable application for the London Underground with color-coded lines and station arrival information.",
-  "main": "index.js",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js"
