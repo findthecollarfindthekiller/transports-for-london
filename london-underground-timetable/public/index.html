@@ -476,6 +476,157 @@
         .tab-content.active {
             display: block;
         }
+        .service-alerts-container {
+            display: grid;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+        .alert-card {
+            background: #fff5f5;
+            border: 1px solid #f8d7da;
+            border-radius: 14px;
+            padding: 1.25rem 1.35rem;
+            box-shadow: 0 12px 28px rgba(239, 68, 68, 0.08);
+            color: #86181d;
+        }
+        .alert-card.minor {
+            background: #fffbeb;
+            border-color: #facc15;
+            color: #854d0e;
+            box-shadow: 0 12px 28px rgba(250, 204, 21, 0.12);
+        }
+        .alert-card .alert-line {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-weight: 800;
+            margin-bottom: 0.65rem;
+        }
+        .alert-card .alert-line-badge {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #dc2626;
+        }
+        .alert-card.minor .alert-line-badge {
+            background: #f59e0b;
+        }
+        .alert-card .alert-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.8);
+            color: inherit;
+        }
+        .planner-container {
+            background: white;
+            border-radius: 20px;
+            padding: 1.8rem;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.06);
+        }
+        .planner-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1.5rem;
+        }
+        .planner-field {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .planner-field label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #4b5563;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+        .planner-field input {
+            padding: 1rem 1.2rem;
+            border-radius: 12px;
+            border: 1px solid #d1d5db;
+            background: #f8fafc;
+            font-size: 0.95rem;
+        }
+        .search-button {
+            padding: 1.1rem 1.5rem;
+            border-radius: 14px;
+            border: none;
+            background: linear-gradient(135deg, #2563eb 0%, #4338ca 100%);
+            color: white;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            min-width: 170px;
+        }
+        .search-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(66, 153, 225, 0.25);
+        }
+        .planner-results {
+            min-height: 200px;
+            padding: 1.2rem;
+            border-radius: 16px;
+            border: 1px dashed #cbd5e1;
+            background: #f8fafc;
+            color: #334155;
+        }
+        .planner-results .route-summary {
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+        .planner-results .route-step {
+            margin-bottom: 1rem;
+            padding: 1rem;
+            border-radius: 14px;
+            background: white;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+        .planner-results .route-step h4 {
+            margin-bottom: 0.75rem;
+            font-size: 1rem;
+            color: #1f2937;
+        }
+        .planner-results .route-step p {
+            margin-bottom: 0.35rem;
+            font-size: 0.92rem;
+            color: #475569;
+        }
+        .planner-results .route-step .line-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            margin-bottom: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .planner-results .route-step .line-pill span {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        .planner-results .no-route {
+            padding: 1rem;
+            border-radius: 12px;
+            background: #eef2ff;
+            border: 1px solid #c7d2fe;
+            color: #3730a3;
+            font-weight: 600;
+        }
         .station-search {
             display: flex;
             gap: 1rem;
@@ -927,6 +1078,166 @@
         .status-banner strong {
             font-size: 1.05rem;
         }
+        .status-summary-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            align-items: stretch;
+        }
+        .status-summary-card {
+            background: white;
+            padding: 1.25rem 1.35rem;
+            border-radius: 16px;
+            border: 1px solid rgba(102, 126, 234, 0.15);
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.04);
+        }
+        .status-summary-count {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #1f2937;
+            margin-top: 0.25rem;
+        }
+        .status-summary-label {
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+        .refresh-status-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border: none;
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            color: white;
+            padding: 0.9rem 1.2rem;
+            border-radius: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .refresh-status-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(99, 102, 241, 0.25);
+        }
+        .service-alerts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        .alert-card {
+            background: #f8fafc;
+            border-radius: 16px;
+            padding: 1.35rem;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            box-shadow: 0 10px 24px rgba(148, 163, 184, 0.08);
+        }
+        .alert-card h4 {
+            margin-bottom: 0.75rem;
+            font-size: 0.95rem;
+            color: #111827;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+        }
+        .alert-severity {
+            display: inline-flex;
+            padding: 0.35rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            margin-top: 0.75rem;
+        }
+        .alert-severity.minor { background: #fef3c7; color: #b45309; }
+        .alert-severity.disrupted { background: #fee2e2; color: #b91c1c; }
+        .route-planner-container {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid rgba(0, 0, 0, 0.06);
+            box-shadow: 0 10px 32px rgba(0, 0, 0, 0.08);
+            padding: 2rem;
+        }
+        .route-planner-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .route-planner-card {
+            background: #f8fafc;
+            padding: 1.5rem;
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+        }
+        .route-planner-card h3 {
+            margin-bottom: 1rem;
+            font-size: 1.2rem;
+            color: #111827;
+        }
+        .route-planner-grid input {
+            width: 100%;
+        }
+        .route-results {
+            display: grid;
+            gap: 1rem;
+        }
+        .route-step {
+            background: #eef2ff;
+            border-left: 4px solid #6366f1;
+            padding: 1rem 1.25rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 18px rgba(99, 102, 241, 0.08);
+        }
+        .route-step h4 {
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            color: #1d4ed8;
+        }
+        .route-step p {
+            margin: 0.35rem 0;
+            color: #334155;
+            line-height: 1.5;
+        }
+        .route-action {
+            display: inline-flex;
+            padding: 0.95rem 1.25rem;
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(16, 185, 129, 0.2);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .route-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 14px 30px rgba(16, 185, 129, 0.25);
+        }
+        .route-suggestions-list {
+            max-height: 220px;
+            overflow-y: auto;
+            position: absolute;
+            z-index: 12;
+            width: calc(100% - 2rem);
+            margin-top: 0.5rem;
+        }
+        .route-search-group {
+            position: relative;
+        }
+        .route-note {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            padding: 1rem;
+            border-radius: 12px;
+            color: #1e3a8a;
+            margin-bottom: 1rem;
+        }
         .station-map,
         .tracking-map {
             width: 100%;
@@ -1001,9 +1312,34 @@
             </div>
         </div>
 
+        <div id="networkSummary" class="line-info" style="margin-bottom: 2rem;">
+            <h3 style="margin-bottom: .75rem; color: #1a1a1a;">Network service summary</h3>
+            <div class="status-summary-container" id="statusSummaryCards">
+                <div class="status-summary-card">
+                    <div class="status-summary-label">Healthy lines</div>
+                    <div class="status-summary-count" id="healthyCount">--</div>
+                </div>
+                <div class="status-summary-card">
+                    <div class="status-summary-label">Minor issues</div>
+                    <div class="status-summary-count" id="minorCount">--</div>
+                </div>
+                <div class="status-summary-card">
+                    <div class="status-summary-label">Disrupted lines</div>
+                    <div class="status-summary-count" id="disruptedCount">--</div>
+                </div>
+                <div class="status-summary-card">
+                    <div class="status-summary-label">Status refreshed</div>
+                    <div class="status-summary-count" id="summaryUpdatedAt">--</div>
+                    <button class="refresh-status-button" id="refreshStatusButton" type="button">Refresh statuses</button>
+                </div>
+            </div>
+            <div id="serviceAlertsContainer" class="service-alerts-container"></div>
+        </div>
+
         <div class="tab-buttons">
             <button class="tab-btn active" data-tab="lines" onclick="switchTab('lines')">Lines & Timetables</button>
             <button class="tab-btn" data-tab="stations" onclick="switchTab('stations')">Station Information</button>
+            <button class="tab-btn" data-tab="planner" onclick="switchTab('planner')">Route Planner</button>
             <button class="tab-btn" data-tab="tracking" onclick="switchTab('tracking')">Live Tracking</button>
         </div>
 
@@ -1046,6 +1382,28 @@
             
             <div id="stationInfoContainer">
                 <div class="no-line-selected">Search for a station to view timetables</div>
+            </div>
+        </div>
+
+        <!-- Route Planner Tab -->
+        <div id="planner-tab" class="tab-content">
+            <div class="planner-container">
+                <div class="planner-header">
+                    <div class="planner-field">
+                        <label for="plannerOriginInput">From</label>
+                        <input type="text" id="plannerOriginInput" placeholder="Origin station" autocomplete="off">
+                        <div class="suggestions-list" id="plannerOriginSuggestions"></div>
+                    </div>
+                    <div class="planner-field">
+                        <label for="plannerDestinationInput">To</label>
+                        <input type="text" id="plannerDestinationInput" placeholder="Destination station" autocomplete="off">
+                        <div class="suggestions-list" id="plannerDestinationSuggestions"></div>
+                    </div>
+                    <button class="search-button" type="button" onclick="planRoute()">Find route</button>
+                </div>
+                <div id="plannerResults" class="planner-results">
+                    <div class="no-route">Enter origin and destination to find a route.</div>
+                </div>
             </div>
         </div>
 
@@ -1184,7 +1542,10 @@
                 // Pre-fetch all line statuses for faster display
                 preloadLineStatuses()
                   .catch(error => console.warn('Could not pre-load line statuses:', error.message))
-                  .finally(() => renderLines());
+                  .finally(() => {
+                      renderLines();
+                      loadStatusSummary().catch(error => console.warn('Could not load status summary:', error.message));
+                  });
                 
                 // Create a sorted list of all stations from both sources
                 const stationSet = new Set();
@@ -1208,6 +1569,8 @@
                 
                 renderLines();
                 setupStationSearch();
+                setupRoutePlanner();
+                renderServiceAlerts().catch(error => console.warn('Could not render service alerts:', error.message));
                 const firstLine = Object.keys(timetables)[0];
                 if (firstLine) {
                     selectLine(firstLine, 0);
@@ -1245,6 +1608,35 @@
             console.error('Error fetching real arrivals:', error);
           }
           return null;
+        }
+
+        async function fetchStatusSummary() {
+          try {
+            const response = await fetch('api/status/summary');
+            if (!response.ok) {
+              throw new Error(`Summary request failed: ${response.status}`);
+            }
+            return await response.json();
+          } catch (error) {
+            console.warn('Unable to fetch status summary:', error.message);
+            return null;
+          }
+        }
+
+        async function loadStatusSummary() {
+          const summaryData = await fetchStatusSummary();
+          if (!summaryData || !summaryData.summary) {
+            document.getElementById('summaryUpdatedAt').textContent = 'Unavailable';
+            return;
+          }
+
+          const { healthy, minor, disrupted, unknown, total } = summaryData.summary;
+          const updatedAt = summaryData.lastUpdated ? new Date(summaryData.lastUpdated) : new Date();
+
+          document.getElementById('healthyCount').textContent = healthy;
+          document.getElementById('minorCount').textContent = minor;
+          document.getElementById('disruptedCount').textContent = disrupted;
+          document.getElementById('summaryUpdatedAt').textContent = `${updatedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} (${total || 0} lines)`;
         }
 
         // Search station using TfL API
@@ -1896,6 +2288,233 @@
             showStationInfo(stationName);
         }
 
+        async function fetchServiceAlerts() {
+            try {
+                const response = await fetch('api/service-alerts');
+                if (!response.ok) {
+                    throw new Error(`Service alerts request failed: ${response.status}`);
+                }
+                return await response.json();
+            } catch (error) {
+                console.warn('Unable to fetch service alerts:', error.message);
+                return null;
+            }
+        }
+
+        async function renderServiceAlerts() {
+            const container = document.getElementById('serviceAlertsContainer');
+            const payload = await fetchServiceAlerts();
+            const alerts = payload?.alerts || [];
+
+            if (!alerts.length) {
+                container.innerHTML = '<div class="alert-card minor">No current service alerts. Services are running normally across the Underground.</div>';
+                return;
+            }
+
+            container.innerHTML = alerts.map(alert => {
+                const severityClass = alert.severity === 'disrupted' ? '' : 'minor';
+                const colorClass = lineColors[alert.line] || 'central';
+                const badgeColor = colorHexMap[colorClass] || '#667eea';
+                return `
+                    <div class="alert-card ${severityClass}">
+                        <div class="alert-line">
+                            <span class="alert-line-badge" style="background: ${badgeColor};"></span>
+                            <strong>${alert.line}</strong>
+                            <span class="alert-status">${alert.status}</span>
+                        </div>
+                        <div>${alert.reason}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let stationGraph = null;
+
+        function createStationGraph() {
+            if (stationGraph) {
+                return stationGraph;
+            }
+
+            stationGraph = {};
+            Object.entries(timetables).forEach(([lineName, data]) => {
+                const stations = data?.stations || [];
+                stations.forEach((station, index) => {
+                    stationGraph[station] = stationGraph[station] || [];
+                    const addEdge = (neighbor) => {
+                        if (!neighbor) return;
+                        if (!stationGraph[station].some(edge => edge.station === neighbor && edge.line === lineName)) {
+                            stationGraph[station].push({ station: neighbor, line: lineName });
+                        }
+                    };
+                    addEdge(stations[index - 1]);
+                    addEdge(stations[index + 1]);
+                });
+            });
+            return stationGraph;
+        }
+
+        function getStationMatch(query) {
+            if (!query || !query.trim()) return null;
+            const normalized = query.trim().toLowerCase();
+            const graph = createStationGraph();
+            return Object.keys(graph).find(name => name.toLowerCase() === normalized) || null;
+        }
+
+        function findRouteBetweenStations(origin, destination) {
+            const graph = createStationGraph();
+            const start = getStationMatch(origin);
+            const end = getStationMatch(destination);
+            if (!start || !end) {
+                return null;
+            }
+
+            const queue = [{ station: start, path: [{ station: start, line: null }] }];
+            const visited = new Set([start]);
+
+            while (queue.length > 0) {
+                const { station, path } = queue.shift();
+                if (station === end) {
+                    return path;
+                }
+
+                for (const edge of graph[station] || []) {
+                    if (visited.has(edge.station)) {
+                        continue;
+                    }
+                    visited.add(edge.station);
+                    queue.push({
+                        station: edge.station,
+                        path: [...path, { station: edge.station, line: edge.line }]
+                    });
+                }
+            }
+
+            return null;
+        }
+
+        function renderRouteResult(path) {
+            const results = document.getElementById('plannerResults');
+            if (!path || path.length === 0) {
+                results.innerHTML = '<div class="no-route">No valid route result could be generated.</div>';
+                return;
+            }
+
+            const segments = [];
+            let segment = { line: path[1]?.line || 'Unknown', stations: [path[0].station] };
+
+            for (let i = 1; i < path.length; i++) {
+                const step = path[i];
+                if (step.line !== segment.line) {
+                    segments.push(segment);
+                    segment = { line: step.line || 'Unknown', stations: [path[i - 1].station] };
+                }
+                segment.stations.push(step.station);
+            }
+
+            if (segment.stations.length) {
+                segments.push(segment);
+            }
+
+            const transferCount = Math.max(0, segments.length - 1);
+            const totalStops = path.length;
+            const routeHtml = segments.map((segmentItem, index) => {
+                const colorKey = lineColors[segmentItem.line] || 'central';
+                const color = colorHexMap[colorKey] || '#667eea';
+                const pathText = segmentItem.stations.join(' → ');
+                return `
+                    <div class="route-step">
+                        <h4>Segment ${index + 1}: ${segmentItem.line} line</h4>
+                        <div class="line-pill"><span style="background: ${color};"></span>${segmentItem.line}</div>
+                        <p><strong>Stations:</strong> ${pathText}</p>
+                        <p><strong>Stops on this segment:</strong> ${segmentItem.stations.length}</p>
+                    </div>
+                `;
+            }).join('');
+
+            results.innerHTML = `
+                <div class="route-summary">Found a route with <strong>${totalStops}</strong> stops and <strong>${transferCount}</strong> transfer${transferCount === 1 ? '' : 's'}.</div>
+                ${routeHtml}
+            `;
+        }
+
+        function renderPlannerSuggestions(listElement, matches, inputElement) {
+            if (!matches || matches.length === 0) {
+                listElement.classList.remove('active');
+                listElement.innerHTML = '';
+                return;
+            }
+
+            listElement.innerHTML = '';
+            matches.forEach(station => {
+                const suggestion = document.createElement('div');
+                suggestion.className = 'suggestion-item planner-suggestion-item';
+                suggestion.textContent = station;
+                suggestion.addEventListener('click', () => {
+                    selectPlannerSuggestion(inputElement.id, station, listElement.id);
+                });
+                listElement.appendChild(suggestion);
+            });
+            listElement.classList.add('active');
+        }
+
+        function selectPlannerSuggestion(inputId, value, listId) {
+            document.getElementById(inputId).value = value;
+            document.getElementById(listId).classList.remove('active');
+        }
+
+        function setupRoutePlanner() {
+            const originInput = document.getElementById('plannerOriginInput');
+            const destinationInput = document.getElementById('plannerDestinationInput');
+            const originSuggestions = document.getElementById('plannerOriginSuggestions');
+            const destinationSuggestions = document.getElementById('plannerDestinationSuggestions');
+
+            const handleSuggestions = (event, suggestionsElement) => {
+                const query = event.target.value.toLowerCase().trim();
+                if (query.length === 0) {
+                    suggestionsElement.classList.remove('active');
+                    return;
+                }
+                const matches = allStations.filter(station => station.toLowerCase().includes(query)).slice(0, 8);
+                renderPlannerSuggestions(suggestionsElement, matches, event.target);
+            };
+
+            originInput.addEventListener('input', (event) => handleSuggestions(event, originSuggestions));
+            destinationInput.addEventListener('input', (event) => handleSuggestions(event, destinationSuggestions));
+
+            document.addEventListener('click', (event) => {
+                if (event.target !== originInput && event.target !== originSuggestions) {
+                    originSuggestions.classList.remove('active');
+                }
+                if (event.target !== destinationInput && event.target !== destinationSuggestions) {
+                    destinationSuggestions.classList.remove('active');
+                }
+            });
+        }
+
+        function planRoute() {
+            const origin = document.getElementById('plannerOriginInput').value.trim();
+            const destination = document.getElementById('plannerDestinationInput').value.trim();
+            const results = document.getElementById('plannerResults');
+
+            if (!origin || !destination) {
+                results.innerHTML = '<div class="no-route">Enter both origin and destination stations to plan your route.</div>';
+                return;
+            }
+
+            if (origin.toLowerCase() === destination.toLowerCase()) {
+                results.innerHTML = `<div class="no-route">Origin and destination are the same station: <strong>${origin}</strong>.</div>`;
+                return;
+            }
+
+            const path = findRouteBetweenStations(origin, destination);
+            if (!path) {
+                results.innerHTML = `<div class="no-route">No route found between <strong>${origin}</strong> and <strong>${destination}</strong>. Try checking the station spelling or selecting nearby interchange stations.</div>`;
+                return;
+            }
+
+            renderRouteResult(path);
+        }
+
         function searchStation() {
             const query = document.getElementById('stationSearchInput').value.trim();
             if (query.length === 0) return;
@@ -2109,6 +2728,14 @@
 
         document.getElementById('statusFilter').addEventListener('change', () => {
             renderLines();
+        });
+
+        document.getElementById('refreshStatusButton').addEventListener('click', async () => {
+            document.getElementById('refreshStatusButton').textContent = 'Refreshing...';
+            document.getElementById('refreshStatusButton').disabled = true;
+            await loadStatusSummary();
+            document.getElementById('refreshStatusButton').textContent = 'Refresh statuses';
+            document.getElementById('refreshStatusButton').disabled = false;
         });
 
         function updateTrackingUpdatedAt() {

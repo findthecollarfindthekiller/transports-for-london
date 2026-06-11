@@ -279,25 +279,25 @@ app.get('/api/lines', async (req, res) => {
 });
 
 app.get('/api/line/:lineId/status', async (req, res) => {
+  const { lineId } = req.params;
   try {
-    const { lineId } = req.params;
     const now = Date.now();
-    
+
     // Check cache
     if (cachedLineStatuses[lineId] && (now - lastLineStatusUpdate[lineId]) < LINE_STATUS_CACHE_DURATION) {
       return res.json(cachedLineStatuses[lineId]);
     }
-    
+
     const status = await makeApiRequest(`/Line/${lineId}/Status`, { priority: true });
-    
+
     // Cache the result
     cachedLineStatuses[lineId] = status;
     lastLineStatusUpdate[lineId] = now;
-    
+
     res.json(status);
   } catch (error) {
-    console.error('Error fetching line status:', error.message);
-    
+    console.error('Error fetching line status for', lineId, error.message);
+
     if (cachedLineStatuses[lineId]) {
       console.log('Returning cached line status due to API error');
       return res.json(cachedLineStatuses[lineId]);
@@ -306,6 +306,108 @@ app.get('/api/line/:lineId/status', async (req, res) => {
     console.warn(`Returning empty status for ${lineId} due to API error`);
     return res.json([]);
   }
+});
+
+function summarizeStatuses(statusMap) {
+  const summary = { healthy: 0, minor: 0, disrupted: 0, unknown: 0, total: 0 };
+
+  Object.values(statusMap).forEach(statusData => {
+    const statusInfo = Array.isArray(statusData) ? statusData[0] : statusData;
+    const description = statusInfo?.lineStatuses?.[0]?.statusSeverityDescription || statusInfo?.statusSeverityDescription || '';
+    const normalized = (description || '').toLowerCase();
+
+    if (normalized.includes('good service')) {
+      summary.healthy += 1;
+    } else if (normalized.includes('minor') || normalized.includes('reduced') || normalized.includes('part suspension') || normalized.includes('planned closure')) {
+      summary.minor += 1;
+    } else if (normalized.includes('severe') || normalized.includes('major') || normalized.includes('suspended') || normalized.includes('disrupted') || normalized.includes('closure')) {
+      summary.disrupted += 1;
+    } else {
+      summary.unknown += 1;
+    }
+
+    summary.total += 1;
+  });
+
+  return summary;
+}
+
+app.get('/api/status/summary', async (req, res) => {
+  try {
+    const now = Date.now();
+    const isCacheFresh = Object.keys(cachedLineStatuses).length > 0 &&
+      Object.keys(cachedLineStatuses).every(lineId => (now - (lastLineStatusUpdate[lineId] || 0)) < LINE_STATUS_CACHE_DURATION);
+
+    if (!isCacheFresh) {
+      await makeApiRequest('/Line/Mode/tube').catch(() => {
+        // Fallback: keep existing cached statuses or local line IDs
+      });
+
+      if (Object.keys(cachedLineStatuses).length === 0) {
+        const fallbackLines = [
+          'bakerloo','central','circle','district','hammersmith-city','jubilee','metropolitan','northern','piccadilly','victoria','waterloo-city'
+        ];
+
+        await Promise.all(fallbackLines.map(lineId =>
+          makeApiRequest(`/Line/${lineId}/Status`).then(status => {
+            cachedLineStatuses[lineId] = status;
+            lastLineStatusUpdate[lineId] = now;
+          }).catch(() => null)
+        ));
+      }
+    }
+
+    const summary = summarizeStatuses(cachedLineStatuses);
+    const lastUpdated = Math.max(...Object.values(lastLineStatusUpdate), now);
+    res.json({ summary, lastUpdated });
+  } catch (error) {
+    console.error('Error fetching status summary:', error.message);
+    const summary = summarizeStatuses(cachedLineStatuses);
+    const lastUpdated = Math.max(...Object.values(lastLineStatusUpdate), Date.now());
+    res.status(200).json({ summary, lastUpdated, warning: 'Partial summary from cache' });
+  }
+});
+
+app.get('/api/service-alerts', async (req, res) => {
+  try {
+    const now = Date.now();
+    const isCacheFresh = Object.keys(cachedLineStatuses).length > 0 &&
+      Object.keys(cachedLineStatuses).every(lineId => (now - (lastLineStatusUpdate[lineId] || 0)) < LINE_STATUS_CACHE_DURATION);
+
+    if (!isCacheFresh) {
+      await makeApiRequest('/Line/Mode/tube').catch(() => {});
+      const fallbackLines = [
+        'bakerloo','central','circle','district','hammersmith-city','jubilee','metropolitan','northern','piccadilly','victoria','waterloo-city'
+      ];
+      await Promise.all(fallbackLines.map(lineId =>
+        makeApiRequest(`/Line/${lineId}/Status`).then(status => {
+          cachedLineStatuses[lineId] = status;
+          lastLineStatusUpdate[lineId] = now;
+        }).catch(() => null)
+      ));
+    }
+
+    const alerts = Object.entries(cachedLineStatuses).flatMap(([lineId, statusData]) => {
+      const statusInfo = Array.isArray(statusData) ? statusData[0] : statusData;
+      const line = tflLineNameMap[lineId] || statusInfo?.name || lineId;
+      const lineSeverity = statusInfo?.lineStatuses?.[0]?.statusSeverityDescription || statusInfo?.statusSeverityDescription || 'Unknown';
+      const reason = statusInfo?.lineStatuses?.[0]?.reason || statusInfo?.reason || 'No details available';
+      const normalized = (lineSeverity || '').toLowerCase();
+      const isAlert = normalized.includes('minor') || normalized.includes('reduced') || normalized.includes('part suspension') || normalized.includes('planned closure') || normalized.includes('severe') || normalized.includes('major') || normalized.includes('suspended') || normalized.includes('disrupted') || normalized.includes('closure');
+      if (!isAlert) return [];
+      const severity = normalized.includes('severe') || normalized.includes('major') || normalized.includes('suspended') || normalized.includes('disrupted') || normalized.includes('closure') ? 'disrupted' : 'minor';
+      return [{ line, lineId, status: lineSeverity, severity, reason }];
+    });
+
+    res.json({ alerts, lastUpdated: now });
+  } catch (error) {
+    console.error('Error fetching service alerts:', error.message);
+    res.status(500).json({ error: 'Unable to fetch service alerts' });
+  }
+});
+
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok', uptime: process.uptime(), timestamp: Date.now() });
 });
 
 // Batch endpoint - fetch all line statuses efficiently
@@ -583,7 +685,11 @@ io.on('connection', async (socket) => {
 });
 
 // Start Server
-server.listen(PORT, () => {
-  console.log(`Server is running on http://localhost:${PORT}`);
-  console.log('Integrating with TfL API for real-time data...');
-});
+if (require.main === module) {
+  server.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+    console.log('Integrating with TfL API for real-time data...');
+  });
+}
+
+module.exports = { app, server, io };
