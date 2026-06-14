@@ -408,6 +408,39 @@
                 grid-template-columns: 1fr;
             }
         }
+        @media (max-width: 640px) {
+            .container {
+                padding: 0 1rem;
+                margin: 1.5rem auto;
+            }
+            .controls {
+                padding: 1.5rem;
+                gap: 1rem;
+            }
+            header {
+                padding: 2rem 1rem;
+            }
+            .stations-container,
+            .schedules-container,
+            .planner-container,
+            .route-planner-container,
+            .live-tracking-container,
+            .route-planner-card {
+                padding: 1.5rem;
+            }
+            .line-btn {
+                padding: 1.1rem 1rem;
+                font-size: 0.9rem;
+            }
+            .planner-header {
+                grid-template-columns: 1fr;
+            }
+            .planner-actions {
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: space-between;
+            }
+        }
         .scrollbar::-webkit-scrollbar {
             width: 8px;
         }
@@ -538,6 +571,29 @@
             align-items: end;
             margin-bottom: 1.5rem;
         }
+        .planner-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            align-items: stretch;
+            justify-content: flex-end;
+        }
+        .swap-button {
+            padding: 0.95rem 1.2rem;
+            border-radius: 14px;
+            border: 1px solid rgba(59, 130, 246, 0.25);
+            background: white;
+            color: #1d4ed8;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+            min-width: 170px;
+        }
+        .swap-button:hover {
+            transform: translateY(-1px);
+            background: #eff6ff;
+            border-color: rgba(59, 130, 246, 0.45);
+        }
         .planner-field {
             position: relative;
             display: flex;
@@ -568,6 +624,15 @@
             cursor: pointer;
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             min-width: 170px;
+        }
+        .planner-map {
+            width: 100%;
+            height: 320px;
+            border-radius: 20px;
+            margin: 0 0 1.25rem;
+            border: 1px solid rgba(148, 163, 184, 0.25);
+            overflow: hidden;
+            background: #f8fafc;
         }
         .search-button:hover {
             transform: translateY(-1px);
@@ -1298,8 +1363,8 @@
             50% { opacity: 0.4; }
         }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <header>
         <h1>🚇 London Underground Timetable</h1>
         <div class="time-display">London Time: <span id="currentTime">--:--</span></div>
@@ -1429,7 +1494,10 @@
                         <input type="text" id="plannerDestinationInput" placeholder="Destination station" autocomplete="off">
                         <div class="suggestions-list" id="plannerDestinationSuggestions"></div>
                     </div>
-                    <button class="search-button" type="button" onclick="planRoute()">Find route</button>
+                    <div class="planner-actions">
+                        <button class="search-button" type="button" onclick="planRoute()">Find route</button>
+                        <button class="swap-button" type="button" onclick="swapPlannerStations()">Swap</button>
+                    </div>
                 </div>
                 <div id="plannerResults" class="planner-results">
                     <div class="no-route">Enter origin and destination to find a route.</div>
@@ -1515,12 +1583,19 @@
         };
         let allStations = [];
         let stationMap = null;
+        let plannerMap = null;
         let stationMarker = null;
         let stationRouteLayers = [];
+        let plannerRouteLayers = [];
+        let plannerRouteMarkers = [];
+        let plannerOverlayRoute = null;
         let trackingMap = null;
         let trackingMarkerMap = new Map();
+        let trackingTrainMarkerMap = new Map();
         let trackingRouteLayerMap = new Map();
+        let trackingLineFilter = null;
         let lastTrackingMapKey = '';
+        let mapUpdateInProgress = false;
         const stationCoordinateCache = {};
         const lineStationCoordsCache = {};
 
@@ -1758,6 +1833,15 @@
             }).addTo(stationMap);
           }
 
+          const plannerMapElement = document.getElementById('plannerMap');
+          if (plannerMapElement && !plannerMap) {
+            plannerMap = L.map('plannerMap', { center: [51.5074, -0.1278], zoom: 11, attributionControl: false });
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+              maxZoom: 19,
+              attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(plannerMap);
+          }
+
           const trackingMapElement = document.getElementById('trackingMap');
           if (trackingMapElement && !trackingMap) {
             trackingMap = L.map('trackingMap', { center: [51.5074, -0.1278], zoom: 10, attributionControl: false });
@@ -1797,8 +1881,13 @@
           if (!trackingMap) return;
 
           const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))];
-          const selectedStations = selectedTrain ? [selectedTrain.nextStation] : [...new Set(currentTrains.map(train => train.nextStation).filter(Boolean))].slice(0, 15);
-          const mapStateKey = JSON.stringify({ selectedTrainId, uniqueLines, selectedStations });
+          if (trackingLineFilter === null) {
+            trackingLineFilter = new Set(uniqueLines);
+          }
+
+          const visibleLines = uniqueLines.filter(line => trackingLineFilter.has(line));
+          const selectedStations = selectedTrain ? [selectedTrain.nextStation] : [...new Set(currentTrains.filter(train => visibleLines.includes(train.line)).map(train => train.nextStation).filter(Boolean))].slice(0, 15);
+          const mapStateKey = JSON.stringify({ selectedTrainId, visibleLines, selectedStations });
           if (mapStateKey === lastTrackingMapKey) {
             trackingMap.invalidateSize();
             return;
@@ -1809,16 +1898,29 @@
 
           // Remove any line layers that are no longer needed
           for (const line of Array.from(trackingRouteLayerMap.keys())) {
-            if (!uniqueLines.includes(line)) {
+            if (!visibleLines.includes(line)) {
               clearLayerGroup(trackingRouteLayerMap.get(line));
               trackingRouteLayerMap.delete(line);
             }
           }
 
-          for (const line of uniqueLines) {
+          // Remove any train markers no longer visible
+          const visibleTrainIds = new Set(currentTrains.filter(train => visibleLines.includes(train.line)).map(train => train.id));
+          for (const trainId of Array.from(trackingTrainMarkerMap.keys())) {
+            if (!visibleTrainIds.has(trainId)) {
+              const marker = trackingTrainMarkerMap.get(trainId);
+              if (marker) {
+                trackingMap.removeLayer(marker);
+              }
+              trackingTrainMarkerMap.delete(trainId);
+            }
+          }
+
+          for (const line of visibleLines) {
             const color = colorHexMap[lineColors[line] || 'central'];
             const selectedLine = selectedTrain && selectedTrain.line === line;
             let lineLayers = trackingRouteLayerMap.get(line);
+            const routeCoords = await getLineRouteCoords(line);
 
             if (!lineLayers) {
               const routes = await drawLineRouteOnMap(line, trackingMap, color, {
@@ -1844,6 +1946,51 @@
                 }
               });
             }
+
+            if (routeCoords && routeCoords.length > 0) {
+              routeCoords.forEach(coord => bounds.push([coord.lat, coord.lon]));
+            }
+          }
+
+          // Add or update train markers for all visible trains
+          for (const train of currentTrains.filter(train => visibleLines.includes(train.line))) {
+            const coords = await getStopPointCoords(train.nextStation);
+            if (!coords) continue;
+
+            const markerKey = train.id;
+            const isSelected = selectedTrain && selectedTrain.id === train.id;
+            const markerColor = colorHexMap[lineColors[train.line] || 'central'];
+            const popupContent = `<strong>${train.line} train</strong><br/>Destination: ${train.destination}<br/>Next: ${train.nextStation}<br/>Arriving in ${train.timeToStation != null ? `${Math.ceil(train.timeToStation / 60)} min` : 'TBC'}`;
+            let marker = trackingTrainMarkerMap.get(markerKey);
+            const markerOptions = {
+              radius: isSelected ? 10 : 6,
+              fillColor: markerColor,
+              color: '#ffffff',
+              weight: isSelected ? 3 : 2,
+              fillOpacity: 0.95
+            };
+
+            if (!marker) {
+              marker = L.circleMarker([coords.lat, coords.lon], markerOptions).addTo(trackingMap);
+              marker.bindPopup(popupContent);
+              marker.on('click', () => selectTrain(train.id));
+              trackingTrainMarkerMap.set(markerKey, marker);
+            } else {
+              marker.setStyle(markerOptions);
+              marker.setLatLng([coords.lat, coords.lon]);
+              const popup = marker.getPopup && marker.getPopup();
+              if (popup) {
+                popup.setContent(popupContent);
+              } else {
+                marker.bindPopup(popupContent);
+              }
+            }
+
+            if (isSelected) {
+              marker.openPopup();
+            }
+
+            bounds.push([coords.lat, coords.lon]);
           }
 
           // Remove markers for stations no longer in view
@@ -2614,33 +2761,71 @@
                 renderPlannerSuggestions(suggestionsElement, matches, event.target);
             };
 
+            const hideSuggestionsIfNeeded = (event) => {
+                if (!originInput.contains(event.target) && !originSuggestions.contains(event.target)) {
+                    originSuggestions.classList.remove('active');
+                }
+                if (!destinationInput.contains(event.target) && !destinationSuggestions.contains(event.target)) {
+                    destinationSuggestions.classList.remove('active');
+                }
+            };
+
             originInput.addEventListener('input', (event) => handleSuggestions(event, originSuggestions));
             destinationInput.addEventListener('input', (event) => handleSuggestions(event, destinationSuggestions));
 
-            document.addEventListener('click', (event) => {
-                if (event.target !== originInput && event.target !== originSuggestions) {
-                    originSuggestions.classList.remove('active');
-                }
-                if (event.target !== destinationInput && event.target !== destinationSuggestions) {
-                    destinationSuggestions.classList.remove('active');
+            originInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    planRoute();
                 }
             });
+            destinationInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    planRoute();
+                }
+            });
+
+            document.addEventListener('click', hideSuggestionsIfNeeded);
+        }
+
+        function normalizeStationName(query) {
+            if (!query || !query.trim()) return null;
+            const normalized = query.trim().toLowerCase();
+            const exactMatch = allStations.find(station => station.toLowerCase() === normalized);
+            if (exactMatch) return exactMatch;
+            const prefixMatch = allStations.find(station => station.toLowerCase().startsWith(normalized));
+            if (prefixMatch) return prefixMatch;
+            return allStations.find(station => station.toLowerCase().includes(normalized)) || null;
         }
 
         function planRoute() {
-            const origin = document.getElementById('plannerOriginInput').value.trim();
-            const destination = document.getElementById('plannerDestinationInput').value.trim();
+            const originInput = document.getElementById('plannerOriginInput');
+            const destinationInput = document.getElementById('plannerDestinationInput');
             const results = document.getElementById('plannerResults');
+            const originRaw = originInput.value.trim();
+            const destinationRaw = destinationInput.value.trim();
 
-            if (!origin || !destination) {
+            if (!originRaw || !destinationRaw) {
                 results.innerHTML = '<div class="no-route">Enter both origin and destination stations to plan your route.</div>';
                 return;
             }
 
-            if (origin.toLowerCase() === destination.toLowerCase()) {
+            const origin = normalizeStationName(originRaw);
+            const destination = normalizeStationName(destinationRaw);
+
+            if (!origin || !destination) {
+                results.innerHTML = `<div class="no-route">Could not match <strong>${originRaw || destinationRaw}</strong> to a valid station. Try using the suggestion list.</div>`;
+                return;
+            }
+
+            if (origin === destination) {
                 results.innerHTML = `<div class="no-route">Origin and destination are the same station: <strong>${origin}</strong>.</div>`;
                 return;
             }
+
+            originInput.value = origin;
+            destinationInput.value = destination;
 
             const routes = findRoutesBetweenStations(origin, destination, 4);
             if (!routes || routes.length === 0) {
@@ -2649,6 +2834,84 @@
             }
 
             renderRouteResults(routes);
+            plannerOverlayRoute = routes[0]?.path || null;
+            if (plannerOverlayRoute) {
+                showPlannerRouteOnMap(plannerOverlayRoute).catch(console.error);
+            } else if (plannerMap) {
+                clearPlannerRouteOverlay();
+            }
+        }
+
+        async function showPlannerRouteOnMap(route) {
+            if (!plannerMap) return;
+            clearPlannerRouteOverlay();
+            if (!route || route.length < 2) {
+                return;
+            }
+
+            const routeCoords = await Promise.all(route.map(step => getStopPointCoords(step.station)));
+            const validCoords = routeCoords.filter(Boolean);
+            if (validCoords.length < 2) {
+                return;
+            }
+
+            const routeLine = L.polyline(validCoords.map(coord => [coord.lat, coord.lon]), {
+                color: '#2563eb',
+                weight: 8,
+                opacity: 0.92,
+                lineCap: 'round',
+                lineJoin: 'round'
+            }).addTo(plannerMap);
+            const routeGlow = L.polyline(validCoords.map(coord => [coord.lat, coord.lon]), {
+                color: '#93c5fd',
+                weight: 18,
+                opacity: 0.24,
+                lineCap: 'round',
+                lineJoin: 'round'
+            }).addTo(plannerMap);
+            plannerRouteLayers.push(routeLine, routeGlow);
+
+            const originCoords = validCoords[0];
+            const originMarker = L.circleMarker([originCoords.lat, originCoords.lon], {
+                radius: 9,
+                fillColor: '#2563eb',
+                color: '#ffffff',
+                weight: 3,
+                fillOpacity: 1
+            }).addTo(plannerMap).bindPopup(`<strong>Origin</strong><br/>${route[0].station}`);
+            const destinationCoords = validCoords[validCoords.length - 1];
+            const destinationMarker = L.circleMarker([destinationCoords.lat, destinationCoords.lon], {
+                radius: 9,
+                fillColor: '#ffffff',
+                color: '#2563eb',
+                weight: 3,
+                fillOpacity: 1
+            }).addTo(plannerMap).bindPopup(`<strong>Destination</strong><br/>${route[route.length - 1].station}`);
+            plannerRouteMarkers.push(originMarker, destinationMarker);
+
+            const bounds = L.latLngBounds(validCoords.map(coord => [coord.lat, coord.lon]));
+            plannerMap.fitBounds(bounds.pad(0.15));
+            plannerMap.invalidateSize();
+        }
+
+        function clearPlannerRouteOverlay() {
+            clearLayerGroup(plannerRouteLayers);
+            plannerRouteLayers = [];
+            plannerRouteMarkers.forEach(marker => {
+                if (marker && marker.remove) {
+                    marker.remove();
+                }
+            });
+            plannerRouteMarkers = [];
+        }
+
+        function swapPlannerStations() {
+            const originInput = document.getElementById('plannerOriginInput');
+            const destinationInput = document.getElementById('plannerDestinationInput');
+            const temp = originInput.value;
+            originInput.value = destinationInput.value;
+            destinationInput.value = temp;
+            planRoute();
         }
 
         function searchStation() {
@@ -2846,6 +3109,16 @@
                     }
                 }, 100);
             }
+            if (tabName === 'planner') {
+                setTimeout(() => {
+                    if (plannerMap) {
+                        plannerMap.invalidateSize();
+                    }
+                    if (plannerOverlayRoute) {
+                        showPlannerRouteOnMap(plannerOverlayRoute).catch(console.error);
+                    }
+                }, 100);
+            }
         }
 
         document.getElementById('viewMode').addEventListener('change', () => {
@@ -2960,21 +3233,11 @@
 
             // Get unique lines
             const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))].sort();
-            
-            // Display which lines are shown on the map
-            const trackingLinesDisplay = document.getElementById('trackingLinesDisplay');
-            trackingLinesDisplay.innerHTML = uniqueLines
-                .map(line => {
-                    const colorClass = lineColors[line] || 'central';
-                    const color = colorHexMap[colorClass];
-                    return `<div style="background-color: ${color}; color: white; padding: 0.5rem 1rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.3px;">${line}</div>`;
-                })
-                .join('');
-            
-            if (uniqueLines.length > 0) {
-                document.getElementById('trackingLinesInfo').style.display = 'block';
+            selectedTrain = currentTrains.find(train => train.id === selectedTrainId) || null;
+            if (selectedTrainId && !selectedTrain) {
+                selectedTrainId = null;
             }
-
+            
             // Sort trains by line
             const trainsByLine = {};
             currentTrains.forEach(train => {
@@ -3056,6 +3319,8 @@
                 selectedInfo.classList.add('visible');
             }
 
+            renderTrackingLinesDisplay(uniqueLines);
+
             setTimeout(() => {
                 updateTrackingMap().catch(console.error);
             }, 100);
@@ -3081,6 +3346,36 @@
         function selectTrain(trainId) {
             selectedTrainId = trainId;
             selectedTrain = currentTrains.find(train => train.id === trainId) || null;
+            renderLiveTrains();
+        }
+
+        function renderTrackingLinesDisplay(uniqueLines) {
+            if (trackingLineFilter === null) {
+                trackingLineFilter = new Set(uniqueLines);
+            }
+
+            const display = document.getElementById('trackingLinesDisplay');
+            display.innerHTML = uniqueLines.map(line => {
+                const active = trackingLineFilter.has(line);
+                const color = colorHexMap[lineColors[line] || 'central'];
+                const opacity = active ? '1' : '0.35';
+                return `
+                    <button type="button" class="line-filter-chip" style="background: ${color}; color: white; opacity: ${opacity}; border: 1px solid ${color}; margin: 0.1rem 0.2rem; padding: 0.45rem 0.8rem; border-radius: 999px; cursor: pointer; font-size: 0.8rem; font-weight: 700; text-transform: uppercase;" onclick="toggleTrackingLine('${line}')">
+                        ${line}
+                    </button>
+                `;
+            }).join('');
+        }
+
+        function toggleTrackingLine(line) {
+            if (!trackingLineFilter) {
+                trackingLineFilter = new Set([line]);
+            }
+            if (trackingLineFilter.has(line)) {
+                trackingLineFilter.delete(line);
+            } else {
+                trackingLineFilter.add(line);
+            }
             renderLiveTrains();
         }
 

@@ -321,6 +321,7 @@ app.get('/api/lines', async (req, res) => {
           { name: 'Waterloo', id: 'waterloo-city', displayName: 'Waterloo', color: '#95CDBA' }
         ];
         cachedLines = localLines;
+        lastLinesUpdate = now;
       }
     }
     res.json(cachedLines);
@@ -557,9 +558,9 @@ function mapArrivalToTrain(arrival) {
   };
 }
 
-async function fetchLiveTfLTrains() {
+async function fetchLiveTfLTrains(forceRefresh = false) {
   try {
-    const allArrivals = await fetchAllArrivals(true);
+    const allArrivals = await fetchAllArrivals(forceRefresh);
 
     if (!Array.isArray(allArrivals) || allArrivals.length === 0) {
       console.log('No arrivals from TfL, using fallback data');
