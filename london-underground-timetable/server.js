@@ -28,12 +28,13 @@ const TFL_OPTIONS = {
 
 // Strict rate limiting with serialized requests
 let lastApiCall = 0;
-const API_RATE_LIMIT = 300; // 300ms to improve overall app responsiveness while respecting TfL rate limits
-const MAX_API_RETRY = 2;
-const API_RETRY_DELAY = 1000;
+const API_RATE_LIMIT = 1000; // 1000ms (increased to prevent 429 errors with parallel operations)
+const MAX_API_RETRY = 3;
+const API_RETRY_DELAY = 2000;
 const API_REQUEST_TIMEOUT = 10000;
 let lastQueuePromise = Promise.resolve();
 const inFlightRequests = new Map();
+let retryAfterUntil = 0; // Track rate limit backoff until timestamp
 
 function queueApiRequest(path, options = {}) {
   if (inFlightRequests.has(path)) {
@@ -58,13 +59,22 @@ function makeApiRequest(path, options = {}) {
 
 async function executeApiRequest(path, attempt = 0) {
   const now = Date.now();
+  
+  // Handle global rate limit backoff (when we receive 429)
+  if (now < retryAfterUntil) {
+    const backoffDelay = retryAfterUntil - now;
+    console.warn(`[${new Date().toLocaleTimeString()}] ⏸️ Global rate limit backoff for ${backoffDelay}ms`);
+    await new Promise(res => setTimeout(res, backoffDelay));
+  }
+  
+  // Add delay to respect rate limits between requests
   const delay = Math.max(0, API_RATE_LIMIT - (now - lastApiCall));
   if (delay > 0) {
     await new Promise(res => setTimeout(res, delay));
   }
   lastApiCall = Date.now();
   const url = `${TFL_API_BASE}${path}`;
-  console.log(`[${new Date().toLocaleTimeString()}] API Request: ${path}`);
+  console.log(`[${new Date().toLocaleTimeString()}] API Request (attempt ${attempt + 1}): ${path}`);
 
   const doRequest = () => new Promise((resolve, reject) => {
     const req = https.get(url, TFL_OPTIONS, (res) => {
@@ -75,6 +85,8 @@ async function executeApiRequest(path, attempt = 0) {
           try {
             const parsed = JSON.parse(data);
             console.log(`[${new Date().toLocaleTimeString()}] ✓ Success: ${path} (${Array.isArray(parsed) ? parsed.length : 'object'} items)`);
+            // Reset backoff on success
+            retryAfterUntil = 0;
             resolve(parsed);
           } catch (parseError) {
             const error = new Error('Invalid JSON response from TfL API');
@@ -88,6 +100,17 @@ async function executeApiRequest(path, attempt = 0) {
         const error = new Error(message);
         error.statusCode = res.statusCode;
         error.isRetryable = res.statusCode === 429 || res.statusCode >= 500;
+        
+        // Handle Retry-After header for 429 responses
+        if (res.statusCode === 429) {
+          const retryAfter = res.headers['retry-after'];
+          if (retryAfter) {
+            const backoffMs = isNaN(retryAfter) ? new Date(retryAfter).getTime() - Date.now() : parseInt(retryAfter) * 1000;
+            retryAfterUntil = Math.max(retryAfterUntil, Date.now() + backoffMs);
+            console.error(`[${new Date().toLocaleTimeString()}] 🚫 Rate limit hit! Backing off until ${new Date(retryAfterUntil).toLocaleTimeString()}`);
+          }
+        }
+        
         console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (${message})`);
         reject(error);
       });
@@ -110,8 +133,10 @@ async function executeApiRequest(path, attempt = 0) {
     return await doRequest();
   } catch (error) {
     if (attempt < MAX_API_RETRY && (error.isRetryable || error.statusCode === 429 || error.statusCode >= 500)) {
-      const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
-      console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Retrying ${path} after ${retryDelay}ms`);
+      const retryDelay = error.statusCode === 429 
+        ? Math.max(2000, API_RETRY_DELAY * Math.pow(2, attempt)) 
+        : API_RETRY_DELAY * Math.pow(2, attempt);
+      console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Retrying ${path} after ${retryDelay}ms (attempt ${attempt + 1}/${MAX_API_RETRY})`);
       await new Promise(res => setTimeout(res, retryDelay));
       return executeApiRequest(path, attempt + 1);
     }
@@ -130,10 +155,10 @@ let lastLineStatusUpdate = {};
 let lastAllLineStatusesUpdate = 0;
 let lastAllArrivalsUpdate = 0;
 let lastStopSearchUpdate = {};
-const CACHE_DURATION = 300000; // 5 minutes
-const LINE_STATUS_CACHE_DURATION = 60000; // 1 minute for line status
-const STOP_SEARCH_CACHE_DURATION = 300000; // 5 minutes for stop searches
-const ALL_ARRIVALS_CACHE_DURATION = 15000; // 15 seconds for live arrival reuse
+const CACHE_DURATION = 600000; // 10 minutes (increased from 5 to reduce API calls)
+const LINE_STATUS_CACHE_DURATION = 120000; // 2 minutes (increased from 1 minute)
+const STOP_SEARCH_CACHE_DURATION = 600000; // 10 minutes (unchanged - already 5 minutes)
+const ALL_ARRIVALS_CACHE_DURATION = 30000; // 30 seconds (increased from 15s)
 
 async function fetchAllLineStatuses(forceRefresh = false) {
   const now = Date.now();
@@ -142,7 +167,7 @@ async function fetchAllLineStatuses(forceRefresh = false) {
   }
 
   try {
-    const data = await makeApiRequest('/Line/Mode/tube/Status', { priority: true });
+    const data = await makeApiRequest('/Line/Mode/tube/Status');
     if (Array.isArray(data) && data.length > 0) {
       const statusMap = {};
       data.forEach(item => {
@@ -168,18 +193,22 @@ async function fetchAllLineStatuses(forceRefresh = false) {
     console.warn('Batch line status fetch failed, falling back to individual line requests:', error.message);
   }
 
+  // Fallback: serialize individual line requests instead of parallel to avoid rate limiting
   const fallbackLineIds = Array.from(new Set(Object.values(lineNameToId)));
   const statusMap = {};
-  await Promise.all(fallbackLineIds.map(async (lineId) => {
+  
+  for (const lineId of fallbackLineIds) {
     try {
-      const status = await makeApiRequest(`/Line/${lineId}/Status`, { priority: true });
+      const status = await makeApiRequest(`/Line/${lineId}/Status`);
       statusMap[lineId] = status;
       cachedLineStatuses[lineId] = status;
       lastLineStatusUpdate[lineId] = now;
+      // Add delay between requests to avoid rate limiting
+      await new Promise(res => setTimeout(res, 300));
     } catch (error) {
       console.warn(`Fallback status request failed for ${lineId}:`, error.message);
     }
-  }));
+  }
 
   cachedAllLineStatuses = statusMap;
   lastAllLineStatusesUpdate = now;
@@ -195,16 +224,19 @@ async function fetchAllArrivals(forceRefresh = false) {
   const lineIds = ['bakerloo','central','circle','district','hammersmith-city','jubilee','metropolitan','northern','piccadilly','victoria','waterloo-city'];
   const allArrivals = [];
 
-  await Promise.all(lineIds.map(async lineId => {
+  // Serialize requests to avoid rate limiting - fetch one line at a time with delays
+  for (const lineId of lineIds) {
     try {
-      const arrivals = await makeApiRequest(`/Line/${lineId}/Arrivals`, { priority: true });
+      const arrivals = await makeApiRequest(`/Line/${lineId}/Arrivals`);
       if (Array.isArray(arrivals)) {
         allArrivals.push(...arrivals);
       }
+      // Add delay between consecutive line requests to avoid rate limiting
+      await new Promise(res => setTimeout(res, 500));
     } catch (error) {
       console.warn(`Arrival request failed for ${lineId}:`, error.message);
     }
-  }));
+  }
 
   cachedAllArrivals = allArrivals;
   lastAllArrivalsUpdate = now;
@@ -639,7 +671,7 @@ io.on('connection', async (socket) => {
       } catch (error) {
         console.error('Error updating trains:', error.message);
       }
-    }, 15000);
+    }, 30000); // Increased from 15s to 30s to reduce API call frequency
   }
   
   socket.on('disconnect', () => {
