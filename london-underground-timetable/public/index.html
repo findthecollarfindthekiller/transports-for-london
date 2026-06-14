@@ -619,6 +619,36 @@
             border-radius: 50%;
             display: inline-block;
         }
+        .route-results-list {
+            display: grid;
+            gap: 1rem;
+        }
+        .route-card {
+            border-radius: 18px;
+            border: 1px solid #e2e8f0;
+            background: #ffffff;
+            box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+            padding: 1rem;
+        }
+        .route-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        .route-card-header h3 {
+            margin: 0;
+            font-size: 1rem;
+            color: #0f172a;
+        }
+        .route-card-header .route-summary {
+            margin: 0;
+            font-size: 0.95rem;
+            color: #475569;
+            font-weight: 600;
+        }
         .planner-results .no-route {
             padding: 1rem;
             border-radius: 12px;
@@ -1488,8 +1518,9 @@
         let stationMarker = null;
         let stationRouteLayers = [];
         let trackingMap = null;
-        let trackingMarkers = [];
-        let trackingRouteLayers = [];
+        let trackingMarkerMap = new Map();
+        let trackingRouteLayerMap = new Map();
+        let lastTrackingMapKey = '';
         const stationCoordinateCache = {};
         const lineStationCoordsCache = {};
 
@@ -1764,38 +1795,79 @@
 
         async function updateTrackingMap() {
           if (!trackingMap) return;
-          trackingMarkers.forEach(marker => trackingMap.removeLayer(marker));
-          trackingMarkers = [];
-          clearLayerGroup(trackingRouteLayers);
-          if (selectedStationMarker) {
-            trackingMap.removeLayer(selectedStationMarker);
-            selectedStationMarker = null;
-          }
 
-          const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))].slice(0, 5);
+          const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))];
+          const selectedStations = selectedTrain ? [selectedTrain.nextStation] : [...new Set(currentTrains.map(train => train.nextStation).filter(Boolean))].slice(0, 15);
+          const mapStateKey = JSON.stringify({ selectedTrainId, uniqueLines, selectedStations });
+          if (mapStateKey === lastTrackingMapKey) {
+            trackingMap.invalidateSize();
+            return;
+          }
+          lastTrackingMapKey = mapStateKey;
+
           const bounds = [];
+
+          // Remove any line layers that are no longer needed
+          for (const line of Array.from(trackingRouteLayerMap.keys())) {
+            if (!uniqueLines.includes(line)) {
+              clearLayerGroup(trackingRouteLayerMap.get(line));
+              trackingRouteLayerMap.delete(line);
+            }
+          }
 
           for (const line of uniqueLines) {
             const color = colorHexMap[lineColors[line] || 'central'];
-            const routes = await drawLineRouteOnMap(line, trackingMap, color, {
-              weight: selectedTrain && selectedTrain.line === line ? 10 : 5,
-              opacity: selectedTrain && selectedTrain.line === line ? 0.95 : 0.75,
-              glowWeight: selectedTrain && selectedTrain.line === line ? 18 : 12,
-              glowOpacity: selectedTrain && selectedTrain.line === line ? 0.22 : 0.15,
-              dashArray: selectedTrain && selectedTrain.line === line ? null : '8, 8'
-            });
-            if (routes) {
-              routes.forEach(route => trackingRouteLayers.push(route));
+            const selectedLine = selectedTrain && selectedTrain.line === line;
+            let lineLayers = trackingRouteLayerMap.get(line);
+
+            if (!lineLayers) {
+              const routes = await drawLineRouteOnMap(line, trackingMap, color, {
+                weight: selectedLine ? 10 : 5,
+                opacity: selectedLine ? 0.95 : 0.75,
+                glowWeight: selectedLine ? 18 : 12,
+                glowOpacity: selectedLine ? 0.22 : 0.15,
+                dashArray: selectedLine ? null : '8, 8'
+              });
+              if (routes) {
+                trackingRouteLayerMap.set(line, routes);
+                lineLayers = routes;
+              }
+            } else {
+              lineLayers.forEach(layer => {
+                if (layer && layer.setStyle) {
+                  layer.setStyle({
+                    color,
+                    weight: selectedLine ? 10 : 5,
+                    opacity: selectedLine ? 0.95 : 0.75,
+                    dashArray: selectedLine ? null : '8, 8'
+                  });
+                }
+              });
+            }
+          }
+
+          // Remove markers for stations no longer in view
+          for (const stationName of Array.from(trackingMarkerMap.keys())) {
+            if (!selectedStations.includes(stationName)) {
+              const marker = trackingMarkerMap.get(stationName);
+              if (marker) {
+                trackingMap.removeLayer(marker);
+              }
+              trackingMarkerMap.delete(stationName);
             }
           }
 
           if (selectedTrain) {
+            if (selectedStationMarker) {
+              trackingMap.removeLayer(selectedStationMarker);
+              selectedStationMarker = null;
+            }
             const stationName = selectedTrain.nextStation;
             const coords = await getStopPointCoords(stationName);
             if (coords) {
               selectedStationMarker = L.circleMarker([coords.lat, coords.lon], {
                 radius: 10,
-                fillColor: '#fff',
+                fillColor: '#ffffff',
                 color: colorHexMap[lineColors[selectedTrain.line] || 'central'],
                 weight: 4,
                 fillOpacity: 1
@@ -1804,8 +1876,19 @@
               bounds.push([coords.lat, coords.lon]);
             }
           } else {
-            const uniqueStations = [...new Set(currentTrains.map(train => train.nextStation).filter(Boolean))].slice(0, 15);
-            for (const stationName of uniqueStations) {
+            if (selectedStationMarker) {
+              trackingMap.removeLayer(selectedStationMarker);
+              selectedStationMarker = null;
+            }
+            for (const stationName of selectedStations) {
+              if (trackingMarkerMap.has(stationName)) {
+                const marker = trackingMarkerMap.get(stationName);
+                if (marker && marker.getLatLng) {
+                  bounds.push([marker.getLatLng().lat, marker.getLatLng().lng]);
+                }
+                continue;
+              }
+
               const coords = await getStopPointCoords(stationName);
               if (coords) {
                 const marker = L.circleMarker([coords.lat, coords.lon], {
@@ -1816,7 +1899,7 @@
                   fillOpacity: 0.9
                 }).addTo(trackingMap);
                 marker.bindPopup(`<strong>${stationName}</strong><br/>Next arrival at ${stationName}`);
-                trackingMarkers.push(marker);
+                trackingMarkerMap.set(stationName, marker);
                 bounds.push([coords.lat, coords.lon]);
               }
             }
@@ -2361,44 +2444,72 @@
         }
 
         function findRouteBetweenStations(origin, destination) {
+            const routes = findRoutesBetweenStations(origin, destination, 1);
+            return routes.length > 0 ? routes[0].path : null;
+        }
+
+        function findRoutesBetweenStations(origin, destination, maxRoutes = 3) {
             const graph = createStationGraph();
             const start = getStationMatch(origin);
             const end = getStationMatch(destination);
             if (!start || !end) {
-                return null;
+                return [];
             }
 
-            const queue = [{ station: start, path: [{ station: start, line: null }] }];
-            const visited = new Set([start]);
+            const compareRoutes = (a, b) => {
+                if (a.transfers !== b.transfers) return a.transfers - b.transfers;
+                if (a.stops !== b.stops) return a.stops - b.stops;
+                return 0;
+            };
 
-            while (queue.length > 0) {
-                const { station, path } = queue.shift();
-                if (station === end) {
-                    return path;
+            const queue = [{
+                station: start,
+                line: null,
+                path: [{ station: start, line: null }],
+                transfers: 0,
+                stops: 1
+            }];
+            const visited = new Map();
+            const solutions = [];
+            const maxStops = 80;
+
+            while (queue.length > 0 && solutions.length < maxRoutes) {
+                queue.sort(compareRoutes);
+                const current = queue.shift();
+                if (current.stops > maxStops) {
+                    continue;
                 }
 
-                for (const edge of graph[station] || []) {
-                    if (visited.has(edge.station)) {
+                if (current.station === end) {
+                    solutions.push(current);
+                    continue;
+                }
+
+                for (const edge of graph[current.station] || []) {
+                    const nextTransfers = current.line === null || current.line === edge.line ? current.transfers : current.transfers + 1;
+                    const nextStops = current.stops + 1;
+                    const key = `${edge.station}|${edge.line}`;
+                    const best = visited.get(key);
+
+                    if (best && best.transfers <= nextTransfers && best.stops <= nextStops) {
                         continue;
                     }
-                    visited.add(edge.station);
+
+                    visited.set(key, { transfers: nextTransfers, stops: nextStops });
                     queue.push({
                         station: edge.station,
-                        path: [...path, { station: edge.station, line: edge.line }]
+                        line: edge.line,
+                        path: [...current.path, { station: edge.station, line: edge.line }],
+                        transfers: nextTransfers,
+                        stops: nextStops
                     });
                 }
             }
 
-            return null;
+            return solutions.sort(compareRoutes);
         }
 
-        function renderRouteResult(path) {
-            const results = document.getElementById('plannerResults');
-            if (!path || path.length === 0) {
-                results.innerHTML = '<div class="no-route">No valid route result could be generated.</div>';
-                return;
-            }
-
+        function renderRouteResult(path, index = 0) {
             const segments = [];
             let segment = { line: path[1]?.line || 'Unknown', stations: [path[0].station] };
 
@@ -2417,13 +2528,13 @@
 
             const transferCount = Math.max(0, segments.length - 1);
             const totalStops = path.length;
-            const routeHtml = segments.map((segmentItem, index) => {
+            const routeHtml = segments.map((segmentItem, segmentIndex) => {
                 const colorKey = lineColors[segmentItem.line] || 'central';
                 const color = colorHexMap[colorKey] || '#667eea';
                 const pathText = segmentItem.stations.join(' → ');
                 return `
                     <div class="route-step">
-                        <h4>Segment ${index + 1}: ${segmentItem.line} line</h4>
+                        <h4>Segment ${segmentIndex + 1}: ${segmentItem.line} line</h4>
                         <div class="line-pill"><span style="background: ${color};"></span>${segmentItem.line}</div>
                         <p><strong>Stations:</strong> ${pathText}</p>
                         <p><strong>Stops on this segment:</strong> ${segmentItem.stations.length}</p>
@@ -2431,9 +2542,34 @@
                 `;
             }).join('');
 
+            return `
+                <div class="route-card">
+                    <div class="route-card-header">
+                        <h3>Route ${index + 1}</h3>
+                        <div class="route-summary">${transferCount === 0 ? 'Direct route' : `${transferCount} transfer${transferCount === 1 ? '' : 's'}`} · ${totalStops} stops</div>
+                    </div>
+                    ${routeHtml}
+                </div>
+            `;
+        }
+
+        function renderRouteResults(paths) {
+            const results = document.getElementById('plannerResults');
+            if (!paths || paths.length === 0) {
+                results.innerHTML = '<div class="no-route">No valid route result could be generated.</div>';
+                return;
+            }
+
+            const sortedPaths = paths.sort((a, b) => {
+                if (a.transfers !== b.transfers) return a.transfers - b.transfers;
+                return a.stops - b.stops;
+            });
+
+            const routesHtml = sortedPaths.map((result, index) => renderRouteResult(result.path, index)).join('');
             results.innerHTML = `
-                <div class="route-summary">Found a route with <strong>${totalStops}</strong> stops and <strong>${transferCount}</strong> transfer${transferCount === 1 ? '' : 's'}.</div>
-                ${routeHtml}
+                <div class="route-results-list">
+                    ${routesHtml}
+                </div>
             `;
         }
 
@@ -2506,13 +2642,13 @@
                 return;
             }
 
-            const path = findRouteBetweenStations(origin, destination);
-            if (!path) {
+            const routes = findRoutesBetweenStations(origin, destination, 4);
+            if (!routes || routes.length === 0) {
                 results.innerHTML = `<div class="no-route">No route found between <strong>${origin}</strong> and <strong>${destination}</strong>. Try checking the station spelling or selecting nearby interchange stations.</div>`;
                 return;
             }
 
-            renderRouteResult(path);
+            renderRouteResults(routes);
         }
 
         function searchStation() {

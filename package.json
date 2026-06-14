@@ -1,0 +1,10 @@
+{
+  "name": "learning-workspace-root",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "cd london-underground-timetable && npm run dev",
+    "start": "cd london-underground-timetable && npm start",
+    "test": "cd london-underground-timetable && npm test"
+  }
+}

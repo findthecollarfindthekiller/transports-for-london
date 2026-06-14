@@ -88,6 +88,8 @@ For development with auto-reload:
 npm run dev
 ```
 
+If you are running commands from the workspace root (`Learning_Workspace`), this script will automatically change into `london-underground-timetable` and start the app there.
+
 ---
 
 This project is under active development. Contributions are welcome!

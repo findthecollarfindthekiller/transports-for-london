@@ -11,7 +11,10 @@ const io = socketIO(server, {
     methods: ["GET", "POST"]
   }
 });
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
+const localStations = require('./public/stations.json');
+const localStationData = require('./public/stations-data.json');
+const localTrainsTracking = require('./public/trains-tracking.json');
 
 // TfL API Configuration
 const TFL_API_BASE = 'https://api.tfl.gov.uk';
@@ -23,14 +26,13 @@ const TFL_OPTIONS = {
   }
 };
 
-// Strict rate limiting with global request queue
+// Strict rate limiting with serialized requests
 let lastApiCall = 0;
-const API_RATE_LIMIT = 1000; // 1 second to avoid TfL public API rate limit issues
+const API_RATE_LIMIT = 300; // 300ms to improve overall app responsiveness while respecting TfL rate limits
 const MAX_API_RETRY = 2;
 const API_RETRY_DELAY = 1000;
 const API_REQUEST_TIMEOUT = 10000;
-let requestQueue = [];
-let isProcessingQueue = false;
+let lastQueuePromise = Promise.resolve();
 const inFlightRequests = new Map();
 
 function queueApiRequest(path, options = {}) {
@@ -38,70 +40,36 @@ function queueApiRequest(path, options = {}) {
     return inFlightRequests.get(path);
   }
 
-  const requestPromise = new Promise((resolve, reject) => {
-    const request = {
-      path,
-      resolve,
-      reject,
-      timestamp: Date.now(),
-      priority: !!options.priority
-    };
-
-    if (request.priority) {
-      requestQueue.unshift(request);
-    } else {
-      requestQueue.push(request);
-    }
-
-    processQueue();
+  const requestPromise = lastQueuePromise = lastQueuePromise.catch(() => {}).then(async () => {
+    const result = await executeApiRequest(path);
+    return result;
   });
 
   inFlightRequests.set(path, requestPromise);
   requestPromise.finally(() => inFlightRequests.delete(path));
+  requestPromise.catch(() => {});
 
   return requestPromise;
-}
-
-async function processQueue() {
-  if (isProcessingQueue || requestQueue.length === 0) return;
-  
-  isProcessingQueue = true;
-  
-  while (requestQueue.length > 0) {
-    const { path, resolve, reject } = requestQueue.shift();
-    const now = Date.now();
-    const timeSinceLastCall = now - lastApiCall;
-    
-    if (timeSinceLastCall < API_RATE_LIMIT) {
-      await new Promise(r => setTimeout(r, API_RATE_LIMIT - timeSinceLastCall));
-    }
-    
-    try {
-      const result = await executeApiRequest(path);
-      resolve(result);
-    } catch (error) {
-      reject(error);
-    }
-  }
-  
-  isProcessingQueue = false;
 }
 
 function makeApiRequest(path, options = {}) {
   return queueApiRequest(path, options);
 }
 
-function executeApiRequest(path, attempt = 0) {
-  return new Promise((resolve, reject) => {
-    lastApiCall = Date.now();
-    const url = `${TFL_API_BASE}${path}`;
-    
-    console.log(`[${new Date().toLocaleTimeString()}] API Request: ${path}`);
-    
+async function executeApiRequest(path, attempt = 0) {
+  const now = Date.now();
+  const delay = Math.max(0, API_RATE_LIMIT - (now - lastApiCall));
+  if (delay > 0) {
+    await new Promise(res => setTimeout(res, delay));
+  }
+  lastApiCall = Date.now();
+  const url = `${TFL_API_BASE}${path}`;
+  console.log(`[${new Date().toLocaleTimeString()}] API Request: ${path}`);
+
+  const doRequest = () => new Promise((resolve, reject) => {
     const req = https.get(url, TFL_OPTIONS, (res) => {
       let data = '';
       res.on('data', chunk => data += chunk);
-
       res.on('end', () => {
         if (res.statusCode === 200) {
           try {
@@ -109,57 +77,139 @@ function executeApiRequest(path, attempt = 0) {
             console.log(`[${new Date().toLocaleTimeString()}] ✓ Success: ${path} (${Array.isArray(parsed) ? parsed.length : 'object'} items)`);
             resolve(parsed);
           } catch (parseError) {
-            if (attempt < MAX_API_RETRY) {
-              const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
-              console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Parse failed for ${path}, retrying after ${retryDelay}ms`);
-              return setTimeout(() => executeApiRequest(path, attempt + 1).then(resolve).catch(reject), retryDelay);
-            }
-            reject(new Error('Invalid JSON response from TfL API'));
+            const error = new Error('Invalid JSON response from TfL API');
+            error.isRetryable = true;
+            reject(error);
           }
-        } else if (res.statusCode === 429 || res.statusCode >= 500) {
-          const message = `API returned status ${res.statusCode}`;
-          console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (${message})`);
-          if (attempt < MAX_API_RETRY) {
-            const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
-            console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Retrying ${path} after ${retryDelay}ms`);
-            return setTimeout(() => executeApiRequest(path, attempt + 1).then(resolve).catch(reject), retryDelay);
-          }
-          reject(new Error(message));
-        } else {
-          console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (HTTP ${res.statusCode})`);
-          reject(new Error(`API returned status ${res.statusCode}`));
+          return;
         }
+
+        const message = `API returned status ${res.statusCode}`;
+        const error = new Error(message);
+        error.statusCode = res.statusCode;
+        error.isRetryable = res.statusCode === 429 || res.statusCode >= 500;
+        console.log(`[${new Date().toLocaleTimeString()}] ✗ Failed: ${path} (${message})`);
+        reject(error);
       });
     });
 
     req.on('error', (e) => {
-      if (attempt < MAX_API_RETRY) {
-        const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
-        console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Request error for ${path}: ${e.message}. Retrying after ${retryDelay}ms`);
-        return setTimeout(() => executeApiRequest(path, attempt + 1).then(resolve).catch(reject), retryDelay);
-      }
-      console.error(`[${new Date().toLocaleTimeString()}] ✗ Error: ${path}`, e.message);
-      reject(e);
+      const error = new Error(`Request error for ${path}: ${e.message}`);
+      error.isRetryable = true;
+      reject(error);
     });
 
     req.setTimeout(API_REQUEST_TIMEOUT, () => {
-      req.destroy(new Error('Request timed out'));
+      const timeoutError = new Error('Request timed out');
+      timeoutError.isRetryable = true;
+      req.destroy(timeoutError);
     });
   });
+
+  try {
+    return await doRequest();
+  } catch (error) {
+    if (attempt < MAX_API_RETRY && (error.isRetryable || error.statusCode === 429 || error.statusCode >= 500)) {
+      const retryDelay = API_RETRY_DELAY * Math.pow(2, attempt);
+      console.warn(`[${new Date().toLocaleTimeString()}] ⚠️ Retrying ${path} after ${retryDelay}ms`);
+      await new Promise(res => setTimeout(res, retryDelay));
+      return executeApiRequest(path, attempt + 1);
+    }
+    throw error;
+  }
 }
 
 // Cache for API data
 let cachedLines = null;
-let cachedStations = null;
 let cachedLineStatuses = {};
+let cachedAllLineStatuses = null;
+let cachedAllArrivals = null;
 let cachedStopSearches = {};
 let lastLinesUpdate = 0;
-let lastStationsUpdate = 0;
 let lastLineStatusUpdate = {};
+let lastAllLineStatusesUpdate = 0;
+let lastAllArrivalsUpdate = 0;
 let lastStopSearchUpdate = {};
 const CACHE_DURATION = 300000; // 5 minutes
 const LINE_STATUS_CACHE_DURATION = 60000; // 1 minute for line status
 const STOP_SEARCH_CACHE_DURATION = 300000; // 5 minutes for stop searches
+const ALL_ARRIVALS_CACHE_DURATION = 15000; // 15 seconds for live arrival reuse
+
+async function fetchAllLineStatuses(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedAllLineStatuses && (now - lastAllLineStatusesUpdate) < LINE_STATUS_CACHE_DURATION) {
+    return cachedAllLineStatuses;
+  }
+
+  try {
+    const data = await makeApiRequest('/Line/Mode/tube/Status', { priority: true });
+    if (Array.isArray(data) && data.length > 0) {
+      const statusMap = {};
+      data.forEach(item => {
+        const lineId = (item.id || item.lineId || item.name || '').toString().toLowerCase().replace(/\s+/g, '-');
+        if (lineId) {
+          statusMap[lineId] = item;
+          cachedLineStatuses[lineId] = item;
+          lastLineStatusUpdate[lineId] = now;
+        }
+      });
+      cachedAllLineStatuses = statusMap;
+    } else if (data && typeof data === 'object') {
+      cachedAllLineStatuses = data;
+      Object.entries(data).forEach(([lineId, status]) => {
+        cachedLineStatuses[lineId] = status;
+        lastLineStatusUpdate[lineId] = now;
+      });
+    }
+
+    lastAllLineStatusesUpdate = now;
+    return cachedAllLineStatuses;
+  } catch (error) {
+    console.warn('Batch line status fetch failed, falling back to individual line requests:', error.message);
+  }
+
+  const fallbackLineIds = Array.from(new Set(Object.values(lineNameToId)));
+  const statusMap = {};
+  await Promise.all(fallbackLineIds.map(async (lineId) => {
+    try {
+      const status = await makeApiRequest(`/Line/${lineId}/Status`, { priority: true });
+      statusMap[lineId] = status;
+      cachedLineStatuses[lineId] = status;
+      lastLineStatusUpdate[lineId] = now;
+    } catch (error) {
+      console.warn(`Fallback status request failed for ${lineId}:`, error.message);
+    }
+  }));
+
+  cachedAllLineStatuses = statusMap;
+  lastAllLineStatusesUpdate = now;
+  return cachedAllLineStatuses;
+}
+
+async function fetchAllArrivals(forceRefresh = false) {
+  const now = Date.now();
+  if (!forceRefresh && cachedAllArrivals && (now - lastAllArrivalsUpdate) < ALL_ARRIVALS_CACHE_DURATION) {
+    return cachedAllArrivals;
+  }
+
+  const lineIds = ['bakerloo','central','circle','district','hammersmith-city','jubilee','metropolitan','northern','piccadilly','victoria','waterloo-city'];
+  const allArrivals = [];
+
+  await Promise.all(lineIds.map(async lineId => {
+    try {
+      const arrivals = await makeApiRequest(`/Line/${lineId}/Arrivals`, { priority: true });
+      if (Array.isArray(arrivals)) {
+        allArrivals.push(...arrivals);
+      }
+    } catch (error) {
+      console.warn(`Arrival request failed for ${lineId}:`, error.message);
+    }
+  }));
+
+  cachedAllArrivals = allArrivals;
+  lastAllArrivalsUpdate = now;
+  return cachedAllArrivals;
+}
 
 // Middleware
 app.use(express.json());
@@ -224,10 +274,9 @@ const lineNameToId = {
 };
 
 // Routes
-app.get('/api/stations', async (req, res) => {
+app.get('/api/stations', (req, res) => {
   try {
-    const stations = require('./public/stations.json');
-    res.json(stations);
+    res.json(localStations);
   } catch (error) {
     console.error('Error loading stations:', error);
     res.status(500).json({ error: 'Failed to load stations' });
@@ -242,6 +291,9 @@ app.get('/api/lines', async (req, res) => {
       console.log('Fetching lines from TfL API...');
       try {
         const lines = await makeApiRequest('/Line/Mode/tube');
+        if (!Array.isArray(lines)) {
+          throw new Error('Unexpected TfL lines response');
+        }
         // Enhance with local line data
         const enhancedLines = lines.map(line => ({
           ...line,
@@ -253,7 +305,7 @@ app.get('/api/lines', async (req, res) => {
         lastLinesUpdate = now;
         console.log(`Successfully fetched ${enhancedLines.length} lines from TfL`);
       } catch (apiError) {
-        console.log('TfL API unavailable, using local data');
+        console.warn('TfL API /Line/Mode/tube unavailable, using local data:', apiError.message);
         // Fallback to local data
         const localLines = [
           { name: 'Bakerloo', id: 'bakerloo', displayName: 'Bakerloo', color: '#B36305' },
@@ -283,17 +335,18 @@ app.get('/api/line/:lineId/status', async (req, res) => {
   try {
     const now = Date.now();
 
-    // Check cache
     if (cachedLineStatuses[lineId] && (now - lastLineStatusUpdate[lineId]) < LINE_STATUS_CACHE_DURATION) {
       return res.json(cachedLineStatuses[lineId]);
     }
 
-    const status = await makeApiRequest(`/Line/${lineId}/Status`, { priority: true });
+    const allStatuses = await fetchAllLineStatuses();
+    if (allStatuses && allStatuses[lineId]) {
+      return res.json(allStatuses[lineId]);
+    }
 
-    // Cache the result
+    const status = await makeApiRequest(`/Line/${lineId}/Status`, { priority: true });
     cachedLineStatuses[lineId] = status;
     lastLineStatusUpdate[lineId] = now;
-
     res.json(status);
   } catch (error) {
     console.error('Error fetching line status for', lineId, error.message);
@@ -334,32 +387,10 @@ function summarizeStatuses(statusMap) {
 
 app.get('/api/status/summary', async (req, res) => {
   try {
-    const now = Date.now();
-    const isCacheFresh = Object.keys(cachedLineStatuses).length > 0 &&
-      Object.keys(cachedLineStatuses).every(lineId => (now - (lastLineStatusUpdate[lineId] || 0)) < LINE_STATUS_CACHE_DURATION);
-
-    if (!isCacheFresh) {
-      await makeApiRequest('/Line/Mode/tube').catch(() => {
-        // Fallback: keep existing cached statuses or local line IDs
-      });
-
-      if (Object.keys(cachedLineStatuses).length === 0) {
-        const fallbackLines = [
-          'bakerloo','central','circle','district','hammersmith-city','jubilee','metropolitan','northern','piccadilly','victoria','waterloo-city'
-        ];
-
-        await Promise.all(fallbackLines.map(lineId =>
-          makeApiRequest(`/Line/${lineId}/Status`).then(status => {
-            cachedLineStatuses[lineId] = status;
-            lastLineStatusUpdate[lineId] = now;
-          }).catch(() => null)
-        ));
-      }
-    }
-
-    const summary = summarizeStatuses(cachedLineStatuses);
-    const lastUpdated = Math.max(...Object.values(lastLineStatusUpdate), now);
-    res.json({ summary, lastUpdated });
+    const statuses = await fetchAllLineStatuses();
+    const summary = summarizeStatuses(statuses || cachedLineStatuses);
+    const lastUpdated = Math.max(...Object.values(lastLineStatusUpdate), Date.now());
+    return res.json({ summary, lastUpdated });
   } catch (error) {
     console.error('Error fetching status summary:', error.message);
     const summary = summarizeStatuses(cachedLineStatuses);
@@ -370,24 +401,8 @@ app.get('/api/status/summary', async (req, res) => {
 
 app.get('/api/service-alerts', async (req, res) => {
   try {
-    const now = Date.now();
-    const isCacheFresh = Object.keys(cachedLineStatuses).length > 0 &&
-      Object.keys(cachedLineStatuses).every(lineId => (now - (lastLineStatusUpdate[lineId] || 0)) < LINE_STATUS_CACHE_DURATION);
-
-    if (!isCacheFresh) {
-      await makeApiRequest('/Line/Mode/tube').catch(() => {});
-      const fallbackLines = [
-        'bakerloo','central','circle','district','hammersmith-city','jubilee','metropolitan','northern','piccadilly','victoria','waterloo-city'
-      ];
-      await Promise.all(fallbackLines.map(lineId =>
-        makeApiRequest(`/Line/${lineId}/Status`).then(status => {
-          cachedLineStatuses[lineId] = status;
-          lastLineStatusUpdate[lineId] = now;
-        }).catch(() => null)
-      ));
-    }
-
-    const alerts = Object.entries(cachedLineStatuses).flatMap(([lineId, statusData]) => {
+    const statuses = await fetchAllLineStatuses();
+    const alerts = Object.entries(statuses || cachedLineStatuses).flatMap(([lineId, statusData]) => {
       const statusInfo = Array.isArray(statusData) ? statusData[0] : statusData;
       const line = tflLineNameMap[lineId] || statusInfo?.name || lineId;
       const lineSeverity = statusInfo?.lineStatuses?.[0]?.statusSeverityDescription || statusInfo?.statusSeverityDescription || 'Unknown';
@@ -399,7 +414,7 @@ app.get('/api/service-alerts', async (req, res) => {
       return [{ line, lineId, status: lineSeverity, severity, reason }];
     });
 
-    res.json({ alerts, lastUpdated: now });
+    res.json({ alerts, lastUpdated: Date.now() });
   } catch (error) {
     console.error('Error fetching service alerts:', error.message);
     res.status(500).json({ error: 'Unable to fetch service alerts' });
@@ -413,67 +428,19 @@ app.get('/api/health', (req, res) => {
 // Batch endpoint - fetch all line statuses efficiently
 app.get('/api/lines/all-statuses', async (req, res) => {
   try {
-    const now = Date.now();
-    
-    // Check if all statuses are cached and fresh
-    const allCached = Object.keys(cachedLineStatuses).length > 0 &&
-      Object.keys(cachedLineStatuses).every(lineId => 
-        (now - (lastLineStatusUpdate[lineId] || 0)) < LINE_STATUS_CACHE_DURATION
-      );
-    
-    if (allCached && Object.keys(cachedLineStatuses).length >= 11) {
-      return res.json(cachedLineStatuses);
+    const statuses = await fetchAllLineStatuses();
+    if (statuses && Object.keys(statuses).length > 0) {
+      return res.json(statuses);
     }
-    
-    // Fetch all lines first if needed
-    let lines = cachedLines;
-    if (!lines || (now - lastLinesUpdate) > CACHE_DURATION) {
-      try {
-        lines = await makeApiRequest('/Line/Mode/tube');
-        cachedLines = lines;
-        lastLinesUpdate = now;
-      } catch (error) {
-        console.log('Using local line data for batch status');
-        lines = [
-          { id: 'bakerloo', name: 'Bakerloo' },
-          { id: 'central', name: 'Central' },
-          { id: 'circle', name: 'Circle' },
-          { id: 'district', name: 'District' },
-          { id: 'hammersmith-city', name: 'Hammersmith' },
-          { id: 'jubilee', name: 'Jubilee' },
-          { id: 'metropolitan', name: 'Metropolitan' },
-          { id: 'northern', name: 'Northern' },
-          { id: 'piccadilly', name: 'Piccadilly' },
-          { id: 'victoria', name: 'Victoria' },
-          { id: 'waterloo-city', name: 'Waterloo' }
-        ];
-      }
-    }
-    
-    // Fetch statuses for all lines in parallel (not queued)
-    const statusPromises = lines.map(line => 
-      makeApiRequest(`/Line/${line.id}/Status`)
-        .then(status => {
-          cachedLineStatuses[line.id] = status;
-          lastLineStatusUpdate[line.id] = now;
-          return status;
-        })
-        .catch(err => {
-          console.warn(`Failed to fetch status for ${line.id}:`, err.message);
-          return cachedLineStatuses[line.id] || null;
-        })
-    );
-    
-    await Promise.all(statusPromises);
-    res.json(cachedLineStatuses);
-  } catch (error) {
-    console.error('Error fetching all line statuses:', error.message);
-    
-    // Return whatever cached data we have
     if (Object.keys(cachedLineStatuses).length > 0) {
       return res.json(cachedLineStatuses);
     }
-    
+    res.status(500).json({ error: 'Failed to fetch line statuses' });
+  } catch (error) {
+    console.error('Error fetching all line statuses:', error.message);
+    if (Object.keys(cachedLineStatuses).length > 0) {
+      return res.json(cachedLineStatuses);
+    }
     res.status(500).json({ error: 'Failed to fetch line statuses' });
   }
 });
@@ -499,9 +466,7 @@ app.get('/api/stoppoint/search', async (req, res) => {
     // Enhance results with local line information
     if (results && results.matches) {
       results.matches = results.matches.map(match => {
-        // Find which lines serve this station from local data
-        const stationData = require('./public/stations-data.json');
-        const localStationInfo = stationData.stations && stationData.stations[match.name];
+        const localStationInfo = localStationData.stations && localStationData.stations[match.name];
         
         if (localStationInfo) {
           match.lines = localStationInfo.lines || [];
@@ -535,8 +500,11 @@ app.get('/api/stoppoint/:stopId/arrivals', async (req, res) => {
   try {
     const { stopId } = req.params;
     const arrivals = await makeApiRequest(`/StopPoint/${stopId}/Arrivals`);
+    if (!Array.isArray(arrivals)) {
+      throw new Error('Unexpected arrivals response');
+    }
     const sorted = arrivals
-      .sort((a, b) => a.timeToStation - b.timeToStation)
+      .sort((a, b) => (a.timeToStation || 0) - (b.timeToStation || 0))
       .slice(0, 10);
     res.json(sorted);
   } catch (error) {
@@ -590,46 +558,25 @@ function mapArrivalToTrain(arrival) {
 }
 
 async function fetchLiveTfLTrains() {
-  const lineIds = ['bakerloo', 'central', 'circle', 'district', 'hammersmith-city', 'jubilee', 'metropolitan', 'northern', 'piccadilly', 'victoria', 'waterloo-city'];
-  
   try {
-    // Fetch arrivals for all lines sequentially to avoid rate limiting
-    const allArrivals = [];
-    let successCount = 0;
-    
-    for (const lineId of lineIds) {
-      try {
-        const arrivals = await makeApiRequest(`/Line/${lineId}/Arrivals`, { priority: true });
-        if (Array.isArray(arrivals)) {
-          allArrivals.push(...arrivals);
-          successCount++;
-          console.log(`✓ Fetched ${arrivals.length} arrivals for ${lineId}`);
-        }
-      } catch (error) {
-        console.log(`✗ Error fetching arrivals for ${lineId}: ${error.message}`);
-      }
-    }
-    
-    console.log(`Successfully fetched arrivals from ${successCount}/${lineIds.length} lines (${allArrivals.length} total arrivals)`);
-    
-    if (allArrivals.length === 0) {
+    const allArrivals = await fetchAllArrivals(true);
+
+    if (!Array.isArray(allArrivals) || allArrivals.length === 0) {
       console.log('No arrivals from TfL, using fallback data');
       const fallback = require('./public/trains-tracking.json');
       return fallback.trains;
     }
-    
+
     const trains = allArrivals
       .sort((a, b) => (a.timeToStation || 0) - (b.timeToStation || 0))
       .slice(0, 150)
       .map(mapArrivalToTrain);
-    
+
     console.log(`Returning ${trains.length} trains from TfL API`);
     return trains;
   } catch (error) {
     console.error('Error fetching live trains from TfL:', error.message);
-    // Fallback to local data
-    const fallback = require('./public/trains-tracking.json');
-    return fallback.trains;
+    return localTrainsTracking.trains;
   }
 }
 
@@ -639,13 +586,28 @@ app.get('/api/live-trains', async (req, res) => {
     res.json({ trains });
   } catch (error) {
     console.error('Error fetching live trains from TfL:', error.message);
-    const fallback = require('./public/trains-tracking.json');
-    res.json(fallback);
+    res.json(localTrainsTracking);
   }
 });
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error('Unhandled express error:', err);
+  if (!res.headersSent) {
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled promise rejection:', reason);
 });
 
 // WebSocket connection for live updates
@@ -661,7 +623,7 @@ io.on('connection', async (socket) => {
       liveTrainCache = { trains };
     } catch (error) {
       console.error('Error loading TfL live trains:', error.message);
-      liveTrainCache = require('./public/trains-tracking.json');
+      liveTrainCache = localTrainsTracking;
     }
   }
 
