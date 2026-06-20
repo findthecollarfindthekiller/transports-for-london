@@ -36,7 +36,7 @@ let lastQueuePromise = Promise.resolve();
 const inFlightRequests = new Map();
 let retryAfterUntil = 0; // Track rate limit backoff until timestamp
 
-function queueApiRequest(path, options = {}) {
+function queueApiRequest(path) {
   if (inFlightRequests.has(path)) {
     return inFlightRequests.get(path);
   }
@@ -53,8 +53,8 @@ function queueApiRequest(path, options = {}) {
   return requestPromise;
 }
 
-function makeApiRequest(path, options = {}) {
-  return queueApiRequest(path, options);
+function makeApiRequest(path) {
+  return queueApiRequest(path);
 }
 
 async function executeApiRequest(path, attempt = 0) {
@@ -159,6 +159,19 @@ const CACHE_DURATION = 600000; // 10 minutes (increased from 5 to reduce API cal
 const LINE_STATUS_CACHE_DURATION = 120000; // 2 minutes (increased from 1 minute)
 const STOP_SEARCH_CACHE_DURATION = 600000; // 10 minutes (unchanged - already 5 minutes)
 const ALL_ARRIVALS_CACHE_DURATION = 30000; // 30 seconds (increased from 15s)
+const MAX_STOP_SEARCH_CACHE_SIZE = 200; // evict oldest entries beyond this limit
+
+function evictStopSearchCache() {
+  const keys = Object.keys(cachedStopSearches);
+  if (keys.length <= MAX_STOP_SEARCH_CACHE_SIZE) return;
+  // Remove the oldest half to avoid frequent eviction
+  const sorted = keys.sort((a, b) => (lastStopSearchUpdate[a] || 0) - (lastStopSearchUpdate[b] || 0));
+  const toRemove = sorted.slice(0, Math.floor(keys.length / 2));
+  toRemove.forEach(k => {
+    delete cachedStopSearches[k];
+    delete lastStopSearchUpdate[k];
+  });
+}
 
 async function fetchAllLineStatuses(forceRefresh = false) {
   const now = Date.now();
@@ -365,6 +378,9 @@ app.get('/api/lines', async (req, res) => {
 
 app.get('/api/line/:lineId/status', async (req, res) => {
   const { lineId } = req.params;
+  if (!/^[a-z0-9-]+$/i.test(lineId) || lineId.length > 50) {
+    return res.status(400).json({ error: 'Invalid line ID' });
+  }
   try {
     const now = Date.now();
 
@@ -377,7 +393,7 @@ app.get('/api/line/:lineId/status', async (req, res) => {
       return res.json(allStatuses[lineId]);
     }
 
-    const status = await makeApiRequest(`/Line/${lineId}/Status`, { priority: true });
+    const status = await makeApiRequest(`/Line/${lineId}/Status`);
     cachedLineStatuses[lineId] = status;
     lastLineStatusUpdate[lineId] = now;
     res.json(status);
@@ -484,6 +500,9 @@ app.get('/api/stoppoint/search', async (req, res) => {
     if (!query) {
       return res.status(400).json({ error: 'Query parameter required' });
     }
+    if (typeof query !== 'string' || query.trim().length === 0 || query.length > 100) {
+      return res.status(400).json({ error: 'Query must be between 1 and 100 characters' });
+    }
     
     const cacheKey = query.toLowerCase().trim();
     const now = Date.now();
@@ -510,9 +529,10 @@ app.get('/api/stoppoint/search', async (req, res) => {
       });
     }
     
-    // Cache the result
+    // Cache the result and evict stale entries if needed
     cachedStopSearches[cacheKey] = results;
     lastStopSearchUpdate[cacheKey] = now;
+    evictStopSearchCache();
     
     res.json(results);
   } catch (error) {
@@ -532,6 +552,9 @@ app.get('/api/stoppoint/search', async (req, res) => {
 app.get('/api/stoppoint/:stopId/arrivals', async (req, res) => {
   try {
     const { stopId } = req.params;
+    if (!/^[a-z0-9]+$/i.test(stopId) || stopId.length > 50) {
+      return res.status(400).json({ error: 'Invalid stop ID' });
+    }
     const arrivals = await makeApiRequest(`/StopPoint/${stopId}/Arrivals`);
     if (!Array.isArray(arrivals)) {
       throw new Error('Unexpected arrivals response');
@@ -562,15 +585,10 @@ function mapArrivalToTrain(arrival) {
   // Map TfL lineId to our line names - handle both ID and display name
   let lineName = arrival.lineName || 'Unknown';
   
-  // Try to map from lineId first
+  // Try to map from lineId first — tflLineNameMap provides the canonical display name
   if (arrival.lineId) {
     const normalized = arrival.lineId.toLowerCase();
     lineName = tflLineNameMap[normalized] || arrival.lineName || 'Unknown';
-  }
-  
-  // Ensure lineName is properly capitalized
-  if (lineName && lineName !== 'Unknown') {
-    lineName = lineName.charAt(0).toUpperCase() + lineName.slice(1).toLowerCase();
   }
   
   return {
@@ -676,6 +694,11 @@ io.on('connection', async (socket) => {
   
   socket.on('disconnect', () => {
     console.log('Client disconnected:', socket.id);
+    if (io.engine.clientsCount === 0 && trainUpdateInterval) {
+      clearInterval(trainUpdateInterval);
+      trainUpdateInterval = null;
+      liveTrainCache = null;
+    }
   });
 });
 

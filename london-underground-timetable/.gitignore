@@ -13,3 +13,7 @@ Thumbs.db
 # Editor directories and files
 .vscode/
 .idea/
+
+# Temporary / scratch files
+temp_create_file.txt
+test-output.txt
