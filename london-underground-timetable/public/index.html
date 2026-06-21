@@ -515,7 +515,7 @@
             box-shadow: 0 -12px 28px rgba(15, 23, 42, 0.32);
             padding: 0.45rem 0.6rem calc(0.45rem + env(safe-area-inset-bottom));
             gap: 0.4rem;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             transform: translateY(0);
             transition: transform 0.24s ease;
             will-change: transform;
@@ -1727,6 +1727,163 @@
                 animation: none;
             }
         }
+
+        /* ─── Network Map ───────────────────────────────────────── */
+        .network-map-container {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .network-map {
+            width: 100%;
+            height: 580px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+            position: relative;
+            margin-top: 0.85rem;
+        }
+        .map-controls-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+        .map-controls-bar h3 {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0;
+        }
+        .map-action-row {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            align-items: center;
+            margin-bottom: 0.85rem;
+        }
+        .map-action-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #6366f1 0%, #4338ca 100%);
+            color: white;
+            font-weight: 700;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            letter-spacing: 0.03em;
+            text-transform: uppercase;
+        }
+        .map-action-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(99,102,241,0.28);
+        }
+        .map-action-btn.secondary {
+            background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+        }
+        .map-action-btn.secondary:hover {
+            box-shadow: 0 6px 16px rgba(100,116,139,0.28);
+        }
+        .line-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+        .line-legend-btn {
+            padding: 0.38rem 0.85rem;
+            border-radius: 999px;
+            border: 2px solid transparent;
+            color: white;
+            font-size: 0.76rem;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: opacity 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        }
+        .line-legend-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 14px rgba(0,0,0,0.22);
+        }
+        .line-legend-btn.line-hidden {
+            opacity: 0.28;
+            box-shadow: none;
+        }
+        .map-loading-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.82);
+            z-index: 999;
+            border-radius: 12px;
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+        }
+        .map-loading-pill {
+            background: #1e293b;
+            color: white;
+            padding: 0.75rem 1.4rem;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.22);
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .map-spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .recenter-map-btn {
+            position: absolute;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 900;
+            padding: 0.55rem 0.9rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+            color: #334155;
+            display: none;
+            transition: box-shadow 0.2s ease;
+        }
+        .recenter-map-btn.visible { display: block; }
+        .recenter-map-btn:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.16); }
+        @media (max-width: 900px) {
+            .mobile-nav-btn {
+                font-size: 0.6rem;
+            }
+            .mobile-nav-btn .icon {
+                font-size: 0.92rem;
+            }
+            .network-map {
+                height: 360px;
+            }
+            .map-controls-bar {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
     </style>
   </head>
   <body>
@@ -1820,6 +1977,10 @@
                 <span class="icon" aria-hidden="true">📡</span>
                 <span>Tracking</span>
             </button>
+            <button class="mobile-nav-btn tab-btn" data-tab="map" type="button" onclick="switchTab('map')">
+                <span class="icon" aria-hidden="true">🗺️</span>
+                <span>Map</span>
+            </button>
         </nav>
         <button id="mobileNavHint" class="mobile-nav-hint" type="button" aria-label="Show navigation">Show menu</button>
 
@@ -1884,6 +2045,7 @@
                         <button class="swap-button" type="button" onclick="swapPlannerStations()">Swap</button>
                     </div>
                 </div>
+                <div id="plannerMap" class="planner-map"></div>
                 <div id="plannerResults" class="planner-results">
                     <div class="no-route">Enter origin and destination to find a route.</div>
                 </div>
@@ -1909,9 +2071,29 @@
                 <div id="selectedTrainInfo" class="selected-train-info"></div>
                 <div class="tracking-map-container">
                     <div id="trackingMap" class="tracking-map"></div>
+                    <button id="recenterMapBtn" class="recenter-map-btn" type="button" onclick="recenterTrackingMap()" aria-label="Recenter map">⊕ Recenter</button>
                 </div>
                 <div class="trains-grid" id="trainsContainer">
                     <div class="no-trains">Loading live train data...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Network Map Tab -->
+        <div id="map-tab" class="tab-content">
+            <div class="network-map-container">
+                <div class="map-controls-bar">
+                    <h3>🗺️ Underground Network Map</h3>
+                    <div class="map-action-row">
+                        <button class="map-action-btn" type="button" onclick="showAllNetworkLines()">Show All Lines</button>
+                        <button class="map-action-btn secondary" type="button" onclick="hideAllNetworkLines()">Hide All</button>
+                    </div>
+                </div>
+                <div class="line-legend" id="lineLegend"></div>
+                <div id="networkMap" class="network-map">
+                    <div class="map-loading-overlay" id="networkMapLoading">
+                        <div class="map-loading-pill"><div class="map-spinner"></div><span id="networkMapLoadingText">Loading line routes…</span></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1987,6 +2169,13 @@
         let trackingMapProgrammaticMove = false;
         const stationCoordinateCache = {};
         const lineStationCoordsCache = {};
+
+        // Network Map
+        let networkMap = null;
+        let networkRouteLayerMap = new Map();
+        let networkLineVisibility = {};
+        let networkMapInitialized = false;
+        let networkMapDrawing = false;
 
         function updateTime() {
             const now = new Date();
@@ -2216,27 +2405,30 @@
           const stationMapElement = document.getElementById('stationMap');
           if (stationMapElement && !stationMap) {
             stationMap = L.map('stationMap', { center: [51.5074, -0.1278], zoom: 12, attributionControl: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
               maxZoom: 19,
-              attribution: '&copy; OpenStreetMap contributors'
+              attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO',
+              subdomains: 'abcd'
             }).addTo(stationMap);
           }
 
           const plannerMapElement = document.getElementById('plannerMap');
           if (plannerMapElement && !plannerMap) {
             plannerMap = L.map('plannerMap', { center: [51.5074, -0.1278], zoom: 11, attributionControl: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
               maxZoom: 19,
-              attribution: '&copy; OpenStreetMap contributors'
+              attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO',
+              subdomains: 'abcd'
             }).addTo(plannerMap);
           }
 
           const trackingMapElement = document.getElementById('trackingMap');
           if (trackingMapElement && !trackingMap) {
             trackingMap = L.map('trackingMap', { center: [51.5074, -0.1278], zoom: 10, attributionControl: false });
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
               maxZoom: 19,
-              attribution: '&copy; OpenStreetMap contributors'
+              attribution: '\u00a9 OpenStreetMap contributors, \u00a9 CARTO',
+              subdomains: 'abcd'
             }).addTo(trackingMap);
 
                         const markUserMapMove = () => {
@@ -2247,6 +2439,10 @@
 
                         trackingMap.on('dragstart', markUserMapMove);
                         trackingMap.on('zoomstart', markUserMapMove);
+                        trackingMap.on('moveend', () => {
+                            const btn = document.getElementById('recenterMapBtn');
+                            if (btn) btn.classList.toggle('visible', !!trackingMapUserMoved);
+                        });
           }
         }
 
@@ -2279,6 +2475,9 @@
                     lastTrackingViewportKey = '';
                     trackingMapUserMoved = false;
 
+                    const recenterBtn = document.getElementById('recenterMapBtn');
+                    if (recenterBtn) recenterBtn.classList.remove('visible');
+
                     if (resetView && trackingMap) {
                         trackingMapProgrammaticMove = true;
                         trackingMap.setView([51.5074, -0.1278], 10);
@@ -2304,7 +2503,7 @@
             fillOpacity: 1.0
           }).addTo(stationMap).bindPopup(`<strong>${label}</strong>`).openPopup();
 
-          for (const line of lines.slice(0, 3)) {
+          for (const line of lines) {
             const color = colorHexMap[lineColors[line] || 'central'];
             const routes = await drawLineRouteOnMap(line, stationMap, color);
             if (routes) {
@@ -2313,6 +2512,14 @@
           }
           stationMap.invalidateSize();
         }
+
+                function recenterTrackingMap() {
+                    if (!trackingMap) return;
+                    trackingMapUserMoved = false;
+                    const btn = document.getElementById('recenterMapBtn');
+                    if (btn) btn.classList.remove('visible');
+                    updateTrackingMap().catch(console.error);
+                }
 
                 async function updateTrackingMap() {
                     if (!trackingMap) return;
@@ -2370,11 +2577,11 @@
 
             if (!lineLayers) {
               const routes = await drawLineRouteOnMap(line, trackingMap, color, {
-                weight: selectedLine ? 10 : 5,
-                opacity: selectedLine ? 0.95 : 0.75,
-                glowWeight: selectedLine ? 18 : 12,
-                glowOpacity: selectedLine ? 0.22 : 0.15,
-                dashArray: selectedLine ? null : '8, 8'
+                weight: selectedLine ? 8 : 4,
+                opacity: selectedLine ? 0.95 : 0.8,
+                glowWeight: selectedLine ? 16 : 8,
+                glowOpacity: selectedLine ? 0.22 : 0.12,
+                dashArray: null
               });
               if (routes) {
                 trackingRouteLayerMap.set(line, routes);
@@ -2385,9 +2592,9 @@
                 if (layer && layer.setStyle) {
                   layer.setStyle({
                     color,
-                    weight: selectedLine ? 10 : 5,
-                    opacity: selectedLine ? 0.95 : 0.75,
-                    dashArray: selectedLine ? null : '8, 8'
+                    weight: selectedLine ? 8 : 4,
+                    opacity: selectedLine ? 0.95 : 0.8,
+                    dashArray: null
                   });
                 }
               });
@@ -2523,6 +2730,139 @@
                         }
                     }
         }
+
+        /* ─── Network Map functions ───────────────────────────────────────── */
+
+        function initializeNetworkMap() {
+            const el = document.getElementById('networkMap');
+            if (!el || networkMap) return;
+
+            networkMap = L.map('networkMap', {
+                center: [51.5074, -0.1278],
+                zoom: 11,
+                zoomControl: true,
+                attributionControl: true
+            });
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(networkMap);
+
+            // Initialise all lines as visible
+            Object.keys(timetables).forEach(line => { networkLineVisibility[line] = true; });
+            renderNetworkLineLegend();
+        }
+
+        async function drawNetworkLines() {
+            if (!networkMap || networkMapDrawing) return;
+            networkMapDrawing = true;
+
+            const loadingEl = document.getElementById('networkMapLoading');
+            const loadingText = document.getElementById('networkMapLoadingText');
+            if (loadingEl) loadingEl.style.display = 'flex';
+
+            const lineNames = Object.keys(timetables);
+            let loaded = 0;
+
+            await Promise.allSettled(lineNames.map(async (lineName) => {
+                if (!networkLineVisibility[lineName]) return;
+                if (networkRouteLayerMap.has(lineName)) { loaded++; return; }
+
+                const colorKey = lineColors[lineName] || 'central';
+                const color = colorHexMap[colorKey];
+
+                const layers = await drawLineRouteOnMap(lineName, networkMap, color, {
+                    weight: 4,
+                    opacity: 0.88,
+                    glowWeight: 10,
+                    glowOpacity: 0.14,
+                    dashArray: null
+                });
+
+                if (layers) {
+                    networkRouteLayerMap.set(lineName, layers);
+                    // Bind a tooltip so users can hover to see the line name
+                    layers[0].bindTooltip(`<strong>${lineName} line</strong>`, {
+                        permanent: false,
+                        direction: 'auto',
+                        className: 'leaflet-line-tooltip'
+                    });
+                }
+                loaded++;
+                if (loadingText) loadingText.textContent = `Loading line routes… ${loaded}/${lineNames.length}`;
+            }));
+
+            if (loadingEl) loadingEl.style.display = 'none';
+            networkMapDrawing = false;
+            networkMapInitialized = true;
+            networkMap.invalidateSize();
+        }
+
+        function renderNetworkLineLegend() {
+            const legend = document.getElementById('lineLegend');
+            if (!legend) return;
+            legend.innerHTML = Object.keys(timetables).map(lineName => {
+                const colorKey = lineColors[lineName] || 'central';
+                const color = colorHexMap[colorKey];
+                const isVisible = networkLineVisibility[lineName] !== false;
+                return `<button type="button" class="line-legend-btn${isVisible ? '' : ' line-hidden'}"
+                    style="background-color:${color}; border-color:${color};"
+                    onclick="toggleNetworkLine('${lineName}')">${lineName}</button>`;
+            }).join('');
+        }
+
+        function toggleNetworkLine(lineName) {
+            networkLineVisibility[lineName] = !networkLineVisibility[lineName];
+            const layers = networkRouteLayerMap.get(lineName);
+            if (layers) {
+                layers.forEach(layer => {
+                    if (networkLineVisibility[lineName]) {
+                        layer.addTo(networkMap);
+                    } else {
+                        networkMap.removeLayer(layer);
+                    }
+                });
+            } else if (networkLineVisibility[lineName] && networkMap) {
+                // Draw the line on demand
+                const colorKey = lineColors[lineName] || 'central';
+                const color = colorHexMap[colorKey];
+                drawLineRouteOnMap(lineName, networkMap, color, {
+                    weight: 4, opacity: 0.88, glowWeight: 10, glowOpacity: 0.14, dashArray: null
+                }).then(layers => {
+                    if (layers) {
+                        networkRouteLayerMap.set(lineName, layers);
+                        layers[0].bindTooltip(`<strong>${lineName} line</strong>`, { permanent: false, direction: 'auto', className: 'leaflet-line-tooltip' });
+                    }
+                }).catch(console.error);
+            }
+            renderNetworkLineLegend();
+        }
+
+        function showAllNetworkLines() {
+            if (!networkMap) return;
+            Object.keys(timetables).forEach(line => {
+                networkLineVisibility[line] = true;
+                const layers = networkRouteLayerMap.get(line);
+                if (layers) layers.forEach(l => l.addTo(networkMap));
+            });
+            renderNetworkLineLegend();
+            // Draw any lines not yet fetched
+            if (!networkMapDrawing) drawNetworkLines().catch(console.error);
+        }
+
+        function hideAllNetworkLines() {
+            if (!networkMap) return;
+            Object.keys(timetables).forEach(line => {
+                networkLineVisibility[line] = false;
+                const layers = networkRouteLayerMap.get(line);
+                if (layers) layers.forEach(l => networkMap.removeLayer(l));
+            });
+            renderNetworkLineLegend();
+        }
+
+        /* ─────────────────────────────────────────────────────────────────── */
 
         function renderLines() {
             const linesContainer = document.getElementById('linesContainer');
@@ -3580,11 +3920,12 @@
             // Reset stationMap to allow re-initialization for new station
             stationMap = null;
 
+            const stationServingLines = servingLines;
             setTimeout(async () => {
                 initializeMaps();
                 const coords = await getStopPointCoords(stationName);
                 if (coords) {
-                    updateStationMap(coords.lat, coords.lon, stationName);
+                    updateStationMap(coords.lat, coords.lon, stationName, stationServingLines);
                 }
             }, 50);
         }
@@ -3643,11 +3984,25 @@
             }
             if (tabName === 'planner') {
                 setTimeout(() => {
+                    initializeMaps();
                     if (plannerMap) {
                         plannerMap.invalidateSize();
                     }
                     if (plannerOverlayRoute) {
                         showPlannerRouteOnMap(plannerOverlayRoute).catch(console.error);
+                    }
+                }, 100);
+            }
+            if (tabName === 'map') {
+                setTimeout(() => {
+                    if (!networkMap) {
+                        initializeNetworkMap();
+                    }
+                    if (networkMap) {
+                        networkMap.invalidateSize();
+                        if (!networkMapInitialized && !networkMapDrawing) {
+                            drawNetworkLines().catch(console.error);
+                        }
                     }
                 }, 100);
             }
