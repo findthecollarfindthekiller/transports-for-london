@@ -42,4 +42,18 @@ describe('London Underground Timetable API', () => {
     expect(response.body).toHaveProperty('trains');
     expect(Array.isArray(response.body.trains)).toBe(true);
   }, 30000);
+
+  test('GET /api/journey-plan returns route options for known stations', async () => {
+    const response = await request(app)
+      .get('/api/journey-plan')
+      .query({ from: 'Kings Cross', to: 'Victoria' })
+      .timeout({ deadline: 30000, response: 25000 })
+      .expect(200);
+
+    expect(response.body).toHaveProperty('routes');
+    expect(Array.isArray(response.body.routes)).toBe(true);
+    expect(response.body.routes.length).toBeGreaterThan(0);
+    expect(response.body.routes[0]).toHaveProperty('segments');
+    expect(Array.isArray(response.body.routes[0].segments)).toBe(true);
+  }, 30000);
 });

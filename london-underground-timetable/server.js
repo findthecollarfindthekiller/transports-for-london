@@ -14,6 +14,7 @@ const io = socketIO(server, {
 const PORT = process.env.PORT || 3000;
 const localStations = require('./public/stations.json');
 const localStationData = require('./public/stations-data.json');
+const localTimetables = require('./public/timetables.json');
 const localTrainsTracking = require('./public/trains-tracking.json');
 
 // TfL API Configuration
@@ -46,11 +47,21 @@ function queueApiRequest(path, options = {}) {
     return result;
   });
 
-  inFlightRequests.set(path, requestPromise);
-  requestPromise.finally(() => inFlightRequests.delete(path));
-  requestPromise.catch(() => {});
+  const trackedPromise = requestPromise.then(
+    (result) => {
+      inFlightRequests.delete(path);
+      return result;
+    },
+    (error) => {
+      inFlightRequests.delete(path);
+      throw error;
+    }
+  );
 
-  return requestPromise;
+  inFlightRequests.set(path, trackedPromise);
+  trackedPromise.catch(() => {});
+
+  return trackedPromise;
 }
 
 function makeApiRequest(path, options = {}) {
@@ -150,15 +161,19 @@ let cachedLineStatuses = {};
 let cachedAllLineStatuses = null;
 let cachedAllArrivals = null;
 let cachedStopSearches = {};
+let cachedJourneyPlans = {};
+let cachedStationLookup = {};
 let lastLinesUpdate = 0;
 let lastLineStatusUpdate = {};
 let lastAllLineStatusesUpdate = 0;
 let lastAllArrivalsUpdate = 0;
 let lastStopSearchUpdate = {};
+let lastJourneyPlanUpdate = {};
 const CACHE_DURATION = 600000; // 10 minutes (increased from 5 to reduce API calls)
 const LINE_STATUS_CACHE_DURATION = 120000; // 2 minutes (increased from 1 minute)
 const STOP_SEARCH_CACHE_DURATION = 600000; // 10 minutes (unchanged - already 5 minutes)
 const ALL_ARRIVALS_CACHE_DURATION = 30000; // 30 seconds (increased from 15s)
+const JOURNEY_PLAN_CACHE_DURATION = 120000; // 2 minutes
 
 async function fetchAllLineStatuses(forceRefresh = false) {
   const now = Date.now();
@@ -304,6 +319,296 @@ const lineNameToId = {
   'Northern': 'northern',
   'Jubilee': 'jubilee'
 };
+
+let localStationGraph = null;
+
+function canonicalizeStationName(value) {
+  return (value || '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/'/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function createLocalStationGraph() {
+  if (localStationGraph) {
+    return localStationGraph;
+  }
+
+  localStationGraph = {};
+  Object.entries(localTimetables).forEach(([lineName, data]) => {
+    const stations = Array.isArray(data?.stations) ? data.stations : [];
+    stations.forEach((station, index) => {
+      localStationGraph[station] = localStationGraph[station] || [];
+
+      const addEdge = (neighbor) => {
+        if (!neighbor) return;
+        if (!localStationGraph[station].some(edge => edge.station === neighbor && edge.line === lineName)) {
+          localStationGraph[station].push({ station: neighbor, line: lineName });
+        }
+      };
+
+      addEdge(stations[index - 1]);
+      addEdge(stations[index + 1]);
+    });
+  });
+
+  return localStationGraph;
+}
+
+function normalizeStationName(query) {
+  if (!query || !query.trim()) return null;
+  const normalized = canonicalizeStationName(query);
+  const stationNames = Object.keys(createLocalStationGraph());
+  const exactMatch = stationNames.find(station => canonicalizeStationName(station) === normalized);
+  if (exactMatch) return exactMatch;
+  const prefixMatch = stationNames.find(station => canonicalizeStationName(station).startsWith(normalized));
+  if (prefixMatch) return prefixMatch;
+  return stationNames.find(station => canonicalizeStationName(station).includes(normalized)) || null;
+}
+
+function findLocalRoutesBetweenStations(origin, destination, maxRoutes = 4) {
+  const graph = createLocalStationGraph();
+  const start = normalizeStationName(origin);
+  const end = normalizeStationName(destination);
+  if (!start || !end) {
+    return [];
+  }
+
+  const compareRoutes = (a, b) => {
+    if (a.transfers !== b.transfers) return a.transfers - b.transfers;
+    if (a.stops !== b.stops) return a.stops - b.stops;
+    return 0;
+  };
+
+  const queue = [{
+    station: start,
+    line: null,
+    path: [{ station: start, line: null }],
+    transfers: 0,
+    stops: 0
+  }];
+  const visited = new Map();
+  const solutions = [];
+  const maxStops = 80;
+
+  while (queue.length > 0 && solutions.length < maxRoutes) {
+    queue.sort(compareRoutes);
+    const current = queue.shift();
+    if (current.stops > maxStops) {
+      continue;
+    }
+
+    if (current.station === end) {
+      solutions.push(current);
+      continue;
+    }
+
+    for (const edge of graph[current.station] || []) {
+      const nextTransfers = current.line === null || current.line === edge.line ? current.transfers : current.transfers + 1;
+      const nextStops = current.stops + 1;
+      const key = `${edge.station}|${edge.line}`;
+      const best = visited.get(key);
+
+      if (best && best.transfers <= nextTransfers && best.stops <= nextStops) {
+        continue;
+      }
+
+      visited.set(key, { transfers: nextTransfers, stops: nextStops });
+      queue.push({
+        station: edge.station,
+        line: edge.line,
+        path: [...current.path, { station: edge.station, line: edge.line }],
+        transfers: nextTransfers,
+        stops: nextStops
+      });
+    }
+  }
+
+  return solutions.sort(compareRoutes);
+}
+
+function buildSegmentsFromPath(path) {
+  if (!Array.isArray(path) || path.length < 2) {
+    return [];
+  }
+
+  const segments = [];
+  let segment = { line: path[1]?.line || 'Unknown', stations: [path[0].station] };
+
+  for (let i = 1; i < path.length; i += 1) {
+    const step = path[i];
+    if (step.line !== segment.line) {
+      segments.push(segment);
+      segment = { line: step.line || 'Unknown', stations: [path[i - 1].station] };
+    }
+    segment.stations.push(step.station);
+  }
+
+  if (segment.stations.length) {
+    segments.push(segment);
+  }
+
+  return segments.map(item => ({
+    line: item.line,
+    stations: item.stations,
+    stopCount: Math.max(0, item.stations.length - 1),
+    instruction: `${item.line} line from ${item.stations[0]} to ${item.stations[item.stations.length - 1]}`
+  }));
+}
+
+function buildLocalJourneyResponse(origin, destination) {
+  const routes = findLocalRoutesBetweenStations(origin, destination, 4).map((route, index) => ({
+    id: `local-${index + 1}`,
+    source: 'local',
+    origin: route.path[0]?.station || origin,
+    destination: route.path[route.path.length - 1]?.station || destination,
+    durationMinutes: Math.max(1, route.stops * 2),
+    transfers: route.transfers,
+    stops: route.stops,
+    summary: route.transfers === 0 ? 'Direct route from timetable data' : `${route.transfers} transfer${route.transfers === 1 ? '' : 's'} from timetable data`,
+    warnings: ['Live TfL journey data unavailable. Showing timetable-based route.'],
+    segments: buildSegmentsFromPath(route.path),
+    path: route.path
+  }));
+
+  return {
+    routes,
+    source: 'local',
+    origin: normalizeStationName(origin) || origin,
+    destination: normalizeStationName(destination) || destination,
+    warnings: routes.length ? ['Live TfL journey data unavailable. Showing timetable-based route.'] : []
+  };
+}
+
+async function resolveStopPoint(query) {
+  const normalizedQuery = canonicalizeStationName(query);
+  if (!normalizedQuery) {
+    return null;
+  }
+
+  if (cachedStationLookup[normalizedQuery]) {
+    return cachedStationLookup[normalizedQuery];
+  }
+
+  const results = await makeApiRequest(`/StopPoint/Search?query=${encodeURIComponent(query)}&modes=tube`);
+  const matches = Array.isArray(results?.matches) ? results.matches : [];
+  const exactMatch = matches.find(match => canonicalizeStationName(match.name) === normalizedQuery);
+  const prefixMatch = matches.find(match => canonicalizeStationName(match.name).startsWith(normalizedQuery));
+  const includesMatch = matches.find(match => canonicalizeStationName(match.name).includes(normalizedQuery));
+  const preferredMatch = exactMatch || prefixMatch || includesMatch || matches[0] || null;
+
+  if (!preferredMatch) {
+    return null;
+  }
+
+  cachedStationLookup[normalizedQuery] = preferredMatch;
+  return preferredMatch;
+}
+
+function mapTfLJourney(journey, index) {
+  const legs = Array.isArray(journey?.legs) ? journey.legs : [];
+  const segments = legs.map((leg, legIndex) => {
+    const routeName = leg.routeOptions?.[0]?.name || leg.lineString || leg.mode?.name || 'Tube';
+    const departure = leg.departurePoint?.commonName || leg.instruction?.summary || 'Start';
+    const arrival = leg.arrivalPoint?.commonName || 'End';
+    const pathStops = Array.isArray(leg.path?.stopPoints) && leg.path.stopPoints.length > 0
+      ? leg.path.stopPoints.map(stop => stop.name).filter(Boolean)
+      : [departure, arrival];
+    const stations = pathStops[0] === departure ? pathStops : [departure, ...pathStops];
+    if (stations[stations.length - 1] !== arrival) {
+      stations.push(arrival);
+    }
+
+    return {
+      line: routeName,
+      stations,
+      stopCount: Math.max(0, stations.length - 1),
+      instruction: leg.instruction?.summary || `${routeName} from ${departure} to ${arrival}`,
+      mode: leg.mode?.name || null,
+      departureTime: leg.departureTime || null,
+      arrivalTime: leg.arrivalTime || null,
+      legIndex
+    };
+  });
+
+  const origin = legs[0]?.departurePoint?.commonName || null;
+  const destination = legs[legs.length - 1]?.arrivalPoint?.commonName || null;
+  const warnings = Array.isArray(journey?.fare?.fareZones) && journey.fare.fareZones.length === 0
+    ? ['Fare information unavailable for this option.']
+    : [];
+
+  return {
+    id: `tfl-${index + 1}`,
+    source: 'tfl',
+    origin,
+    destination,
+    durationMinutes: Number(journey?.duration) || 0,
+    transfers: Math.max(0, segments.filter(segment => (segment.mode || '').toLowerCase() !== 'walking').length - 1),
+    stops: segments.reduce((total, segment) => total + segment.stopCount, 0),
+    summary: journey?.summary || `${Number(journey?.duration) || 0} min journey`,
+    departureTime: legs[0]?.departureTime || null,
+    arrivalTime: legs[legs.length - 1]?.arrivalTime || null,
+    warnings,
+    segments,
+    path: segments.flatMap((segment, segmentIndex) => segment.stations.map((station, stationIndex) => ({
+      station,
+      line: segmentIndex === 0 && stationIndex === 0 ? null : segment.line
+    })))
+  };
+}
+
+async function fetchJourneyPlan(origin, destination) {
+  const cacheKey = `${origin.trim().toLowerCase()}|${destination.trim().toLowerCase()}`;
+  const now = Date.now();
+
+  if (cachedJourneyPlans[cacheKey] && (now - lastJourneyPlanUpdate[cacheKey]) < JOURNEY_PLAN_CACHE_DURATION) {
+    return cachedJourneyPlans[cacheKey];
+  }
+
+  try {
+    const [fromStop, toStop] = await Promise.all([
+      resolveStopPoint(origin),
+      resolveStopPoint(destination)
+    ]);
+
+    const normalizedOrigin = normalizeStationName(origin) || fromStop?.name || origin;
+    const normalizedDestination = normalizeStationName(destination) || toStop?.name || destination;
+
+    if (!normalizedOrigin || !normalizedDestination) {
+      throw new Error('Could not resolve station names');
+    }
+
+    const journeyData = await makeApiRequest(`/Journey/JourneyResults/${encodeURIComponent(normalizedOrigin)}/to/${encodeURIComponent(normalizedDestination)}?mode=tube&journeyPreference=LeastTime`);
+    const routes = Array.isArray(journeyData?.journeys)
+      ? journeyData.journeys.slice(0, 4).map(mapTfLJourney).filter(route => route.segments.length > 0)
+      : [];
+
+    if (!routes.length) {
+      throw new Error('TfL journey API returned no routes');
+    }
+
+    const payload = {
+      routes,
+      source: 'tfl',
+      origin: normalizedOrigin,
+      destination: normalizedDestination,
+      warnings: []
+    };
+
+    cachedJourneyPlans[cacheKey] = payload;
+    lastJourneyPlanUpdate[cacheKey] = now;
+    return payload;
+  } catch (error) {
+    console.warn('Falling back to local journey planning:', error.message);
+    const fallback = buildLocalJourneyResponse(origin, destination);
+    cachedJourneyPlans[cacheKey] = fallback;
+    lastJourneyPlanUpdate[cacheKey] = now;
+    return fallback;
+  }
+}
 
 // Routes
 app.get('/api/stations', (req, res) => {
@@ -543,6 +848,21 @@ app.get('/api/stoppoint/:stopId/arrivals', async (req, res) => {
   } catch (error) {
     console.error('Error fetching arrivals:', error.message);
     res.json([]);
+  }
+});
+
+app.get('/api/journey-plan', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+    if (!from || !to) {
+      return res.status(400).json({ error: 'Both from and to query parameters are required' });
+    }
+
+    const payload = await fetchJourneyPlan(String(from), String(to));
+    res.json(payload);
+  } catch (error) {
+    console.error('Error planning journey:', error.message);
+    res.status(500).json({ error: 'Failed to plan journey' });
   }
 });
 

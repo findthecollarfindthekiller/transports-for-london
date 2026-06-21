@@ -503,6 +503,107 @@
             border-bottom-color: #667eea;
             background: rgba(102, 126, 234, 0.08);
         }
+        .mobile-bottom-nav {
+            display: none;
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 1100;
+            background: rgba(15, 23, 42, 0.96);
+            border-top: 1px solid rgba(148, 163, 184, 0.35);
+            box-shadow: 0 -12px 28px rgba(15, 23, 42, 0.32);
+            padding: 0.45rem 0.6rem calc(0.45rem + env(safe-area-inset-bottom));
+            gap: 0.4rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            transform: translateY(0);
+            transition: transform 0.24s ease;
+            will-change: transform;
+        }
+        .mobile-bottom-nav.is-hidden {
+            transform: translateY(calc(100% + env(safe-area-inset-bottom)));
+        }
+        .mobile-nav-hint {
+            display: none;
+            position: fixed;
+            left: 50%;
+            bottom: calc(0.6rem + env(safe-area-inset-bottom));
+            transform: translateX(-50%) translateY(14px);
+            z-index: 1099;
+            border: none;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.92);
+            color: #e2e8f0;
+            padding: 0.35rem 0.8rem;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.35);
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-nav-hint.visible {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            pointer-events: auto;
+        }
+        .mobile-nav-btn {
+            min-height: 52px;
+            border: none;
+            border-radius: 12px;
+            background: transparent;
+            color: #cbd5e1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 0.2rem;
+            font-weight: 700;
+            font-size: 0.7rem;
+            letter-spacing: 0.03em;
+            transition: transform 0.14s ease, background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mobile-nav-btn .icon {
+            font-size: 1.02rem;
+            line-height: 1;
+            transform: translateY(0);
+            transition: transform 0.2s ease;
+        }
+        .mobile-nav-btn:focus-visible {
+            outline: 2px solid #93c5fd;
+            outline-offset: 2px;
+        }
+        .mobile-nav-btn:active {
+            transform: scale(0.96);
+        }
+        .mobile-nav-btn.active {
+            color: #ffffff;
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.95) 0%, rgba(67, 56, 202, 0.95) 100%);
+            box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+            animation: mobileNavPop 240ms ease-out;
+        }
+        .mobile-nav-btn.active .icon {
+            transform: translateY(-1px);
+        }
+        @keyframes mobileNavPop {
+            0% {
+                transform: scale(0.92);
+                filter: saturate(0.9);
+            }
+            70% {
+                transform: scale(1.05);
+                filter: saturate(1.1);
+            }
+            100% {
+                transform: scale(1);
+                filter: saturate(1);
+            }
+        }
         .tab-content {
             display: none;
         }
@@ -1362,6 +1463,270 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.4; }
         }
+
+        /* Mobile enhancement overrides */
+        html {
+            -webkit-text-size-adjust: 100%;
+            text-size-adjust: 100%;
+        }
+
+        @media (max-width: 900px) {
+            body {
+                padding-bottom: calc(86px + env(safe-area-inset-bottom));
+            }
+
+            .container {
+                margin: 1.25rem auto;
+                padding: 0 0.85rem;
+            }
+
+            .tab-buttons {
+                display: none;
+            }
+
+            .mobile-bottom-nav {
+                display: grid;
+            }
+
+            .mobile-nav-hint {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+            }
+
+            header {
+                padding: 1.5rem 1rem;
+            }
+
+            h1 {
+                font-size: 1.65rem;
+                line-height: 1.2;
+                margin-bottom: 0.35rem;
+            }
+
+            .controls {
+                grid-template-columns: 1fr;
+                gap: 0.85rem;
+                padding: 1rem;
+                border-radius: 14px;
+                margin-bottom: 1rem;
+            }
+
+            .tab-btn {
+                flex: 0 0 auto;
+                min-width: max-content;
+                scroll-snap-align: start;
+                font-size: 0.78rem;
+                letter-spacing: 0.04em;
+                padding: 0.8rem 0.95rem;
+                min-height: 44px;
+            }
+
+            .line-info,
+            .stations-container,
+            .schedules-container,
+            .planner-container,
+            .live-tracking-container,
+            .route-planner-container,
+            .route-planner-card {
+                padding: 1rem;
+                border-radius: 14px;
+                margin-bottom: 1rem;
+            }
+
+            .line-info {
+                margin-bottom: 1rem;
+            }
+
+            .lines-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.65rem;
+                margin-bottom: 1.2rem;
+            }
+
+            .line-btn {
+                min-height: 52px;
+                padding: 0.8rem 0.7rem;
+                font-size: 0.82rem;
+            }
+
+            .main-content {
+                gap: 1rem;
+            }
+
+            .stations-list,
+            .schedules-list {
+                max-height: none;
+                padding-right: 0;
+            }
+
+            .planner-header {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .planner-actions {
+                flex-direction: row;
+                gap: 0.65rem;
+            }
+
+            .search-button,
+            .swap-button,
+            .refresh-button,
+            .refresh-status-button,
+            .route-action,
+            .station-search button {
+                min-height: 44px;
+                min-width: 0;
+                width: 100%;
+                padding: 0.75rem 0.85rem;
+            }
+
+            .station-search {
+                flex-direction: column;
+                gap: 0.65rem;
+                margin-bottom: 1rem;
+            }
+
+            .suggestions-list,
+            .route-suggestions-list {
+                width: 100%;
+                max-height: 220px;
+                margin-top: 0.45rem;
+            }
+
+            .status-summary-container,
+            .service-alerts-container,
+            .trains-grid,
+            .route-planner-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+
+            .tracking-bar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.7rem;
+                margin-bottom: 0.9rem;
+            }
+
+            .tracking-actions {
+                width: 100%;
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .tracking-updated {
+                text-align: center;
+            }
+
+            .station-name-large {
+                font-size: 1.25rem;
+                line-height: 1.25;
+            }
+
+            .station-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.55rem;
+                margin-bottom: 1rem;
+                padding-bottom: 0.85rem;
+            }
+
+            .station-line-badge {
+                font-size: 0.82rem;
+                padding: 0.55rem 0.85rem;
+            }
+
+            .service-item {
+                grid-template-columns: 1fr;
+                gap: 0.7rem;
+                padding: 1rem;
+            }
+
+            .train-card {
+                padding: 1rem;
+            }
+
+            .train-header {
+                align-items: flex-start;
+                flex-direction: column;
+                gap: 0.55rem;
+            }
+
+            .train-info-item {
+                grid-template-columns: 1fr;
+                gap: 0.2rem;
+            }
+
+            .route-card {
+                padding: 0.8rem;
+            }
+
+            .route-card-header {
+                gap: 0.5rem;
+                margin-bottom: 0.7rem;
+            }
+
+            .route-card-header .route-summary {
+                font-size: 0.86rem;
+            }
+
+            .station-map,
+            .tracking-map,
+            .planner-map {
+                min-height: 240px;
+                height: 240px;
+                margin-bottom: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .line-btn {
+                font-size: 0.76rem;
+            }
+
+            .tab-btn {
+                font-size: 0.72rem;
+                padding: 0.7rem 0.8rem;
+            }
+
+            .station,
+            .schedule-item,
+            .planner-results .route-step {
+                padding: 0.85rem;
+            }
+
+            .tracking-status,
+            .selected-train-info,
+            .planner-results,
+            .alert-card {
+                font-size: 0.88rem;
+            }
+        }
+
+        @media (hover: none) and (pointer: coarse) {
+            .line-btn:hover,
+            .station:hover,
+            .schedule-item:hover,
+            .train-card:hover,
+            .refresh-button:hover,
+            .search-button:hover,
+            .swap-button:hover,
+            .route-action:hover {
+                transform: none;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .mobile-nav-btn,
+            .mobile-nav-btn .icon,
+            .mobile-nav-btn.active,
+            .mobile-nav-hint {
+                transition: none;
+                animation: none;
+            }
+        }
     </style>
   </head>
   <body>
@@ -1437,6 +1802,26 @@
             <button class="tab-btn" data-tab="planner" onclick="switchTab('planner')">Route Planner</button>
             <button class="tab-btn" data-tab="tracking" onclick="switchTab('tracking')">Live Tracking</button>
         </div>
+
+        <nav class="mobile-bottom-nav" aria-label="Primary navigation">
+            <button class="mobile-nav-btn tab-btn active" data-tab="lines" type="button" onclick="switchTab('lines')">
+                <span class="icon" aria-hidden="true">🚇</span>
+                <span>Lines</span>
+            </button>
+            <button class="mobile-nav-btn tab-btn" data-tab="stations" type="button" onclick="switchTab('stations')">
+                <span class="icon" aria-hidden="true">📍</span>
+                <span>Stations</span>
+            </button>
+            <button class="mobile-nav-btn tab-btn" data-tab="planner" type="button" onclick="switchTab('planner')">
+                <span class="icon" aria-hidden="true">🧭</span>
+                <span>Planner</span>
+            </button>
+            <button class="mobile-nav-btn tab-btn" data-tab="tracking" type="button" onclick="switchTab('tracking')">
+                <span class="icon" aria-hidden="true">📡</span>
+                <span>Tracking</span>
+            </button>
+        </nav>
+        <button id="mobileNavHint" class="mobile-nav-hint" type="button" aria-label="Show navigation">Show menu</button>
 
         <!-- Lines Tab -->
         <div id="lines-tab" class="tab-content active">
@@ -1595,7 +1980,11 @@
         let trackingRouteLayerMap = new Map();
         let trackingLineFilter = null;
         let lastTrackingMapKey = '';
+        let lastTrackingViewportKey = '';
         let mapUpdateInProgress = false;
+        let pendingTrackingMapRefresh = false;
+        let trackingMapUserMoved = false;
+        let trackingMapProgrammaticMove = false;
         const stationCoordinateCache = {};
         const lineStationCoordsCache = {};
 
@@ -1849,8 +2238,56 @@
               maxZoom: 19,
               attribution: '&copy; OpenStreetMap contributors'
             }).addTo(trackingMap);
+
+                        const markUserMapMove = () => {
+                            if (!trackingMapProgrammaticMove) {
+                                trackingMapUserMoved = true;
+                            }
+                        };
+
+                        trackingMap.on('dragstart', markUserMapMove);
+                        trackingMap.on('zoomstart', markUserMapMove);
           }
         }
+
+                function clearTrackingMapOverlays(resetView = false) {
+                    for (const line of Array.from(trackingRouteLayerMap.keys())) {
+                        clearLayerGroup(trackingRouteLayerMap.get(line) || []);
+                        trackingRouteLayerMap.delete(line);
+                    }
+
+                    for (const marker of trackingTrainMarkerMap.values()) {
+                        if (marker && trackingMap) {
+                            trackingMap.removeLayer(marker);
+                        }
+                    }
+                    trackingTrainMarkerMap.clear();
+
+                    for (const marker of trackingMarkerMap.values()) {
+                        if (marker && trackingMap) {
+                            trackingMap.removeLayer(marker);
+                        }
+                    }
+                    trackingMarkerMap.clear();
+
+                    if (selectedStationMarker && trackingMap) {
+                        trackingMap.removeLayer(selectedStationMarker);
+                        selectedStationMarker = null;
+                    }
+
+                    lastTrackingMapKey = '';
+                    lastTrackingViewportKey = '';
+                    trackingMapUserMoved = false;
+
+                    if (resetView && trackingMap) {
+                        trackingMapProgrammaticMove = true;
+                        trackingMap.setView([51.5074, -0.1278], 10);
+                        trackingMap.invalidateSize();
+                        setTimeout(() => {
+                            trackingMapProgrammaticMove = false;
+                        }, 0);
+                    }
+                }
 
         async function updateStationMap(lat, lon, label, lines = []) {
           if (!stationMap) return;
@@ -1877,8 +2314,17 @@
           stationMap.invalidateSize();
         }
 
-        async function updateTrackingMap() {
-          if (!trackingMap) return;
+                async function updateTrackingMap() {
+                    if (!trackingMap) return;
+
+                    if (mapUpdateInProgress) {
+                        pendingTrackingMapRefresh = true;
+                        return;
+                    }
+
+                    mapUpdateInProgress = true;
+
+                    try {
 
           const uniqueLines = [...new Set(currentTrains.map(train => train.line).filter(Boolean))];
           if (trackingLineFilter === null) {
@@ -2052,10 +2498,30 @@
             }
           }
 
-          if (bounds.length) {
+                        const sortedVisibleLines = [...visibleLines].sort();
+                        const viewportKey = selectedTrain
+                            ? `selected:${selectedTrain.id || ''}|${sortedVisibleLines.join(',')}`
+                            : `lines:${sortedVisibleLines.join(',')}`;
+                        const shouldAutoFit = !!selectedTrain || !trackingMapUserMoved || viewportKey !== lastTrackingViewportKey;
+
+                        if (bounds.length && shouldAutoFit) {
+                            trackingMapProgrammaticMove = true;
             trackingMap.fitBounds(bounds, { padding: [40, 40] });
+                            trackingMap.once('moveend', () => {
+                                trackingMapProgrammaticMove = false;
+                            });
+                            lastTrackingViewportKey = viewportKey;
           }
           trackingMap.invalidateSize();
+                    } finally {
+                        mapUpdateInProgress = false;
+                        if (pendingTrackingMapRefresh) {
+                            pendingTrackingMapRefresh = false;
+                            window.requestAnimationFrame(() => {
+                                updateTrackingMap().catch(console.error);
+                            });
+                        }
+                    }
         }
 
         function renderLines() {
@@ -2585,14 +3051,32 @@
 
         function getStationMatch(query) {
             if (!query || !query.trim()) return null;
-            const normalized = query.trim().toLowerCase();
+            const normalized = canonicalizeStationName(query);
             const graph = createStationGraph();
-            return Object.keys(graph).find(name => name.toLowerCase() === normalized) || null;
+            return Object.keys(graph).find(name => canonicalizeStationName(name) === normalized) || null;
+        }
+
+        function canonicalizeStationName(value) {
+            return (value || '')
+                .toLowerCase()
+                .replace(/&/g, ' and ')
+                .replace(/'/g, '')
+                .replace(/[^a-z0-9]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
         function findRouteBetweenStations(origin, destination) {
             const routes = findRoutesBetweenStations(origin, destination, 1);
             return routes.length > 0 ? routes[0].path : null;
+        }
+
+        async function fetchJourneyPlan(origin, destination) {
+            const response = await fetch(`api/journey-plan?from=${encodeURIComponent(origin)}&to=${encodeURIComponent(destination)}`);
+            if (!response.ok) {
+                throw new Error(`Journey plan request failed: ${response.status}`);
+            }
+            return response.json();
         }
 
         function findRoutesBetweenStations(origin, destination, maxRoutes = 3) {
@@ -2656,7 +3140,7 @@
             return solutions.sort(compareRoutes);
         }
 
-        function renderRouteResult(path, index = 0) {
+        function buildRouteDataFromPath(path, index = 0) {
             const segments = [];
             let segment = { line: path[1]?.line || 'Unknown', stations: [path[0].station] };
 
@@ -2673,9 +3157,31 @@
                 segments.push(segment);
             }
 
-            const transferCount = Math.max(0, segments.length - 1);
-            const totalStops = path.length;
-            const routeHtml = segments.map((segmentItem, segmentIndex) => {
+            return {
+                id: `local-${index + 1}`,
+                source: 'local',
+                summary: Math.max(0, segments.length - 1) === 0 ? 'Direct route from timetable data' : `${Math.max(0, segments.length - 1)} transfer${Math.max(0, segments.length - 1) === 1 ? '' : 's'} from timetable data`,
+                durationMinutes: Math.max(1, (path.length - 1) * 2),
+                transfers: Math.max(0, segments.length - 1),
+                stops: Math.max(0, path.length - 1),
+                segments: segments.map(segmentItem => ({
+                    line: segmentItem.line,
+                    stations: segmentItem.stations,
+                    stopCount: Math.max(0, segmentItem.stations.length - 1),
+                    instruction: `${segmentItem.line} line from ${segmentItem.stations[0]} to ${segmentItem.stations[segmentItem.stations.length - 1]}`
+                })),
+                path,
+                warnings: ['Live TfL journey data unavailable. Showing timetable-based route.']
+            };
+        }
+
+        function renderRouteResult(route, index = 0) {
+            const transferCount = route.transfers ?? Math.max(0, (route.segments?.length || 1) - 1);
+            const totalStops = route.stops ?? route.segments?.reduce((sum, segment) => sum + (segment.stopCount ?? Math.max(0, (segment.stations?.length || 1) - 1)), 0) ?? 0;
+            const duration = route.durationMinutes ? `${route.durationMinutes} min` : 'Duration unavailable';
+            const sourceLabel = route.source === 'tfl' ? 'Live TfL journey' : 'Timetable fallback';
+            const warningsHtml = (route.warnings || []).map(message => `<p><strong>Note:</strong> ${message}</p>`).join('');
+            const routeHtml = (route.segments || []).map((segmentItem, segmentIndex) => {
                 const colorKey = lineColors[segmentItem.line] || 'central';
                 const color = colorHexMap[colorKey] || '#667eea';
                 const pathText = segmentItem.stations.join(' → ');
@@ -2683,8 +3189,9 @@
                     <div class="route-step">
                         <h4>Segment ${segmentIndex + 1}: ${segmentItem.line} line</h4>
                         <div class="line-pill"><span style="background: ${color};"></span>${segmentItem.line}</div>
+                        <p><strong>Direction:</strong> ${segmentItem.instruction || `${segmentItem.line} service`}</p>
                         <p><strong>Stations:</strong> ${pathText}</p>
-                        <p><strong>Stops on this segment:</strong> ${segmentItem.stations.length}</p>
+                        <p><strong>Stops on this segment:</strong> ${segmentItem.stopCount ?? Math.max(0, segmentItem.stations.length - 1)}</p>
                     </div>
                 `;
             }).join('');
@@ -2693,26 +3200,29 @@
                 <div class="route-card">
                     <div class="route-card-header">
                         <h3>Route ${index + 1}</h3>
-                        <div class="route-summary">${transferCount === 0 ? 'Direct route' : `${transferCount} transfer${transferCount === 1 ? '' : 's'}`} · ${totalStops} stops</div>
+                        <div class="route-summary">${route.summary || (transferCount === 0 ? 'Direct route' : `${transferCount} transfer${transferCount === 1 ? '' : 's'}`)} · ${totalStops} stops · ${duration}</div>
                     </div>
+                    <p><strong>Source:</strong> ${sourceLabel}</p>
+                    ${warningsHtml}
                     ${routeHtml}
                 </div>
             `;
         }
 
-        function renderRouteResults(paths) {
+        function renderRouteResults(routes) {
             const results = document.getElementById('plannerResults');
-            if (!paths || paths.length === 0) {
+            if (!routes || routes.length === 0) {
                 results.innerHTML = '<div class="no-route">No valid route result could be generated.</div>';
                 return;
             }
 
-            const sortedPaths = paths.sort((a, b) => {
+            const sortedRoutes = [...routes].sort((a, b) => {
                 if (a.transfers !== b.transfers) return a.transfers - b.transfers;
-                return a.stops - b.stops;
+                if ((a.durationMinutes || 0) !== (b.durationMinutes || 0)) return (a.durationMinutes || 0) - (b.durationMinutes || 0);
+                return (a.stops || 0) - (b.stops || 0);
             });
 
-            const routesHtml = sortedPaths.map((result, index) => renderRouteResult(result.path, index)).join('');
+            const routesHtml = sortedRoutes.map((route, index) => renderRouteResult(route, index)).join('');
             results.innerHTML = `
                 <div class="route-results-list">
                     ${routesHtml}
@@ -2791,15 +3301,15 @@
 
         function normalizeStationName(query) {
             if (!query || !query.trim()) return null;
-            const normalized = query.trim().toLowerCase();
-            const exactMatch = allStations.find(station => station.toLowerCase() === normalized);
+            const normalized = canonicalizeStationName(query);
+            const exactMatch = allStations.find(station => canonicalizeStationName(station) === normalized);
             if (exactMatch) return exactMatch;
-            const prefixMatch = allStations.find(station => station.toLowerCase().startsWith(normalized));
+            const prefixMatch = allStations.find(station => canonicalizeStationName(station).startsWith(normalized));
             if (prefixMatch) return prefixMatch;
-            return allStations.find(station => station.toLowerCase().includes(normalized)) || null;
+            return allStations.find(station => canonicalizeStationName(station).includes(normalized)) || null;
         }
 
-        function planRoute() {
+        async function planRoute() {
             const originInput = document.getElementById('plannerOriginInput');
             const destinationInput = document.getElementById('plannerDestinationInput');
             const results = document.getElementById('plannerResults');
@@ -2827,14 +3337,33 @@
             originInput.value = origin;
             destinationInput.value = destination;
 
-            const routes = findRoutesBetweenStations(origin, destination, 4);
-            if (!routes || routes.length === 0) {
-                results.innerHTML = `<div class="no-route">No route found between <strong>${origin}</strong> and <strong>${destination}</strong>. Try checking the station spelling or selecting nearby interchange stations.</div>`;
-                return;
+            results.innerHTML = '<div class="no-route">Planning your journey...</div>';
+
+            try {
+                const journeyPlan = await fetchJourneyPlan(origin, destination);
+                const routes = Array.isArray(journeyPlan?.routes) ? journeyPlan.routes : [];
+
+                if (!routes.length) {
+                    throw new Error('No routes returned by journey API');
+                }
+
+                renderRouteResults(routes);
+                plannerOverlayRoute = routes[0]?.path || null;
+            } catch (error) {
+                console.warn('Journey API unavailable, using local planner:', error.message);
+                const localRoutes = findRoutesBetweenStations(origin, destination, 4).map((route, index) => buildRouteDataFromPath(route.path, index));
+                if (!localRoutes.length) {
+                    results.innerHTML = `<div class="no-route">No route found between <strong>${origin}</strong> and <strong>${destination}</strong>. Try checking the station spelling or selecting nearby interchange stations.</div>`;
+                    if (plannerMap) {
+                        clearPlannerRouteOverlay();
+                    }
+                    return;
+                }
+
+                renderRouteResults(localRoutes);
+                plannerOverlayRoute = localRoutes[0]?.path || null;
             }
 
-            renderRouteResults(routes);
-            plannerOverlayRoute = routes[0]?.path || null;
             if (plannerOverlayRoute) {
                 showPlannerRouteOnMap(plannerOverlayRoute).catch(console.error);
             } else if (plannerMap) {
@@ -3093,20 +3622,23 @@
 
             // Show selected tab
             document.getElementById(tabName + '-tab').classList.add('active');
-            const button = document.querySelector(`.tab-btn[data-tab="${tabName}"]`);
-            if (button) {
+            document.querySelectorAll(`.tab-btn[data-tab="${tabName}"]`).forEach(button => {
                 button.classList.add('active');
+            });
+
+            const mobileNav = document.querySelector('.mobile-bottom-nav');
+            if (mobileNav) {
+                mobileNav.classList.remove('is-hidden');
             }
             
             // Refresh tracking when tab is opened
             if (tabName === 'tracking') {
                 setTimeout(() => {
+                    initializeMaps();
                     if (trackingMap) {
                         trackingMap.invalidateSize();
                     }
-                    if (currentTrains.length > 0) {
-                        renderLiveTrains();
-                    }
+                    renderLiveTrains();
                 }, 100);
             }
             if (tabName === 'planner') {
@@ -3228,6 +3760,10 @@
             if (!currentTrains || currentTrains.length === 0) {
                 container.innerHTML = '<div class="no-trains">No trains currently tracking</div>';
                 document.getElementById('trackingLinesInfo').style.display = 'none';
+                const selectedInfo = document.getElementById('selectedTrainInfo');
+                selectedInfo.textContent = 'No active train data right now. Use Refresh to fetch the latest services.';
+                selectedInfo.classList.add('visible');
+                clearTrackingMapOverlays(true);
                 return;
             }
 
@@ -3385,9 +3921,133 @@
             return '#dc241f';
         }
 
+        function setupMobileNavAutoHide() {
+            const mobileNav = document.querySelector('.mobile-bottom-nav');
+            const mobileNavHint = document.getElementById('mobileNavHint');
+            if (!mobileNav || mobileNav.dataset.autohideBound === 'true') {
+                return;
+            }
+
+            mobileNav.dataset.autohideBound = 'true';
+
+            const MOBILE_HIDE_BREAKPOINT = 900;
+            const TOP_SAFE_ZONE = 32;
+            const HIDE_AFTER_SCROLL_Y = 140;
+            const DELTA_THRESHOLD = 12;
+            const HINT_VISIBLE_MS = 1600;
+            let lastScrollY = window.scrollY;
+            let ticking = false;
+            let hintTimer = null;
+
+            const hideHint = () => {
+                if (!mobileNavHint) return;
+                mobileNavHint.classList.remove('visible');
+            };
+
+            const showHintBriefly = () => {
+                if (!mobileNavHint) return;
+                mobileNavHint.classList.add('visible');
+                if (hintTimer) {
+                    clearTimeout(hintTimer);
+                }
+                hintTimer = setTimeout(() => {
+                    hideHint();
+                }, HINT_VISIBLE_MS);
+            };
+
+            const revealNav = () => {
+                mobileNav.classList.remove('is-hidden');
+                hideHint();
+            };
+
+            const hideNav = () => {
+                mobileNav.classList.add('is-hidden');
+                showHintBriefly();
+            };
+
+            const isInteractingWithInputs = () => {
+                const focusedElement = document.activeElement;
+                if (focusedElement && (
+                    focusedElement.matches('input, textarea, select, [contenteditable="true"]') ||
+                    focusedElement.closest('.station-search, .planner-header, .planner-field')
+                )) {
+                    return true;
+                }
+
+                return !!document.querySelector('.suggestions-list.active');
+            };
+
+            const applyNavVisibility = () => {
+                const isMobileWidth = window.matchMedia(`(max-width: ${MOBILE_HIDE_BREAKPOINT}px)`).matches;
+                const currentScrollY = window.scrollY;
+
+                if (!isMobileWidth) {
+                    revealNav();
+                    lastScrollY = currentScrollY;
+                    ticking = false;
+                    return;
+                }
+
+                if (currentScrollY <= TOP_SAFE_ZONE) {
+                    revealNav();
+                    lastScrollY = currentScrollY;
+                    ticking = false;
+                    return;
+                }
+
+                if (isInteractingWithInputs()) {
+                    revealNav();
+                    lastScrollY = currentScrollY;
+                    ticking = false;
+                    return;
+                }
+
+                const delta = currentScrollY - lastScrollY;
+                if (Math.abs(delta) >= DELTA_THRESHOLD) {
+                    if (delta > 0 && currentScrollY > HIDE_AFTER_SCROLL_Y) {
+                        hideNav();
+                    } else {
+                        revealNav();
+                    }
+                    lastScrollY = currentScrollY;
+                }
+
+                ticking = false;
+            };
+
+            const onScroll = () => {
+                if (ticking) {
+                    return;
+                }
+                ticking = true;
+                window.requestAnimationFrame(applyNavVisibility);
+            };
+
+            const onResize = () => {
+                if (!window.matchMedia(`(max-width: ${MOBILE_HIDE_BREAKPOINT}px)`).matches) {
+                    revealNav();
+                }
+            };
+
+            const onTouchStart = () => {
+                revealNav();
+            };
+
+            window.addEventListener('scroll', onScroll, { passive: true });
+            window.addEventListener('resize', onResize);
+            window.addEventListener('touchstart', onTouchStart, { passive: true });
+
+            if (mobileNavHint) {
+                mobileNavHint.addEventListener('click', () => {
+                    revealNav();
+                });
+            }
+        }
+
         function initializeApp() {
             loadData();
             initializeMaps();
+            setupMobileNavAutoHide();
             setTimeout(() => {
                 const script = document.createElement('script');
                 script.src = '/socket.io/socket.io.js';
